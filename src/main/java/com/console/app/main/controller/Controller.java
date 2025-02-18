@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class Controller {
 
   // GET endpoint с Query Parameters
-  @GetMapping("/greeting")
+  @GetMapping(value = "/greeting", produces = "text/plain")
   public String greeting(@RequestParam(name = "name", defaultValue = "World") String name) {
     return "Hello, " + name + "!";
   }

@@ -13,4 +13,16 @@ public class GlobalExceptionHandler {
     public String handleUserNotFoundException(UserNotFoundExceptions ex) {
         return ex.getMessage();
     }
+
+    @ExceptionHandler(Exception.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public String handleGeneralException(Exception ex) {
+        return "Ошибка сервера: " + ex.getMessage();
+    }
+
+    @ExceptionHandler(SessionNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public String handleSessionNotFoundException(SessionNotFoundException ex) {
+        return ex.getMessage();
+    }
 }

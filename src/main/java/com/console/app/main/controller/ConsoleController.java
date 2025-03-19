@@ -1,8 +1,8 @@
 package com.console.app.main.controller;
 
 import com.console.app.main.model.Console;
-import com.console.app.main.model.ExecutionResult;
 import com.console.app.main.service.ConsoleService;
+import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,12 +22,9 @@ public class ConsoleController {
         this.consoleService = consoleService;
     }
 
-    @GetMapping("/execute")
-    public ExecutionResult executeCode(
-            @RequestParam String language,
-            @RequestParam String code,
-            @RequestParam int id) {
-        return consoleService.executeCode(language, code, (long) id);
+    @GetMapping(produces = "application/json")
+    public List<Console> getAllConsoles() {
+        return consoleService.getAllConsoles();
     }
 
     @PostMapping
@@ -42,7 +39,6 @@ public class ConsoleController {
         return consoleService.createConsole(console);
     }
 
-    // DELETE с query-параметром id
     @DeleteMapping
     public void deleteConsole(@RequestParam Long id) {
         consoleService.deleteConsole(id);

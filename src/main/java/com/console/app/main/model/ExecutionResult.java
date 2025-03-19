@@ -1,6 +1,6 @@
 package com.console.app.main.model;
 
-
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -10,9 +10,11 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "execution_results")
+
 public class ExecutionResult {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -27,20 +29,25 @@ public class ExecutionResult {
     @Column(nullable = false)
     private String result;
 
-    // Связь многие-к-одному с Session
+    @Column(nullable = false)
+    private LocalDateTime time;
+
+    // Связь многие-к-одному с Console
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "session_id", nullable = false)
-    private Session session;
+    @JoinColumn(name = "console_id", nullable = false)
+    @JsonBackReference
+    private Console console;
 
     // Пустой конструктор (обязателен для JPA)
     public ExecutionResult() {}
 
     // Конструктор с параметрами
-    public ExecutionResult(String language, String code, String result, Session session) {
+    public ExecutionResult(String language, String code, String result, Console console) {
         this.language = language;
         this.code = code;
         this.result = result;
-        this.session = session;
+        this.time = LocalDateTime.now();
+        this.console = console;
     }
 
     // Геттеры и сеттеры
@@ -76,11 +83,20 @@ public class ExecutionResult {
         this.result = result;
     }
 
-    public Session getSession() {
-        return session;
+    public Console getConsole() {
+        return console;
     }
 
-    public void setSession(Session session) {
-        this.session = session;
+    public void setConsole(Console console) {
+        this.console = console;
+    }
+
+    public LocalDateTime getTime() {
+        return time;
+    }
+
+    public void setTime(LocalDateTime time) {
+        this.time = time;
     }
 }
+

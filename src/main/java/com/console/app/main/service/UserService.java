@@ -56,6 +56,27 @@ public class UserService {
 
     }
 
+    @Transactional
+    public void removeConsoleFromUser(Long userId, Long consoleId) {
+        // Находим пользователя по ID
+        User user = userRepository.findById(Math.toIntExact(userId))
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+
+        // Находим консоль по ID
+        Console console = consoleRepository.findById(consoleId)
+                .orElseThrow(() -> new RuntimeException("Console not found with id: " + consoleId));
+
+        // Удаляем консоль из коллекции пользователя
+        user.getConsoles().remove(console);
+
+        // Удаляем пользователя из коллекции консоли (для двунаправленной связи)
+        console.getUsers().remove(user);
+
+        // Сохраняем изменения (необязательно, если используется транзакция)
+        userRepository.save(user);
+        consoleRepository.save(console);
+    }
+
     public Optional<User> patchUser(int id, Map<String, Object> updates) {
         return userRepository.findById(id).map(user -> {
             updates.forEach((key, value) -> {

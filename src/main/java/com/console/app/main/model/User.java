@@ -1,5 +1,6 @@
 package com.console.app.main.model;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -35,6 +36,7 @@ public class User {
 
     // Связь один-ко-многим с Session
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonManagedReference
     private List<Session> sessions = new ArrayList<>();
 
     @ManyToMany
@@ -43,6 +45,7 @@ public class User {
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "console_id")
     )
+    @JsonManagedReference
     private Set<Console> consoles = new HashSet<>();
 
     // Пустой конструктор (обязателен для JPA)

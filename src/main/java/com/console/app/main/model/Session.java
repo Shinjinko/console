@@ -1,6 +1,6 @@
 package com.console.app.main.model;
 
-import jakarta.persistence.CascadeType;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -9,10 +9,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Entity
 @Table(name = "sessions")
@@ -23,6 +21,7 @@ public class Session {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
+    @JsonBackReference
     private User user;
 
     @Column(name = "start_time", nullable = false)
@@ -32,12 +31,8 @@ public class Session {
     private LocalDateTime endTime;
 
     @Column(name = "status", nullable = false)
-    private String status; // ACTIVE, FINISHED, ERROR
+    private String status;
 
-    @OneToMany(mappedBy = "session", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<ExecutionResult> executionResults;
-
-    // Геттеры и сеттеры
     public Long getId() {
         return id;
     }

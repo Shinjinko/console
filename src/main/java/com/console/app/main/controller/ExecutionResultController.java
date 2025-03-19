@@ -2,6 +2,7 @@ package com.console.app.main.controller;
 
 import com.console.app.main.model.ExecutionResult;
 import com.console.app.main.service.ExecutionResultService;
+import jakarta.transaction.Transactional;
 import java.util.List;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,7 +24,8 @@ public class ExecutionResultController {
         this.executionResultService = executionResultService;
     }
 
-    @GetMapping
+    @Transactional
+    @GetMapping(produces = "application/json")
     public List<ExecutionResult> getAllExecutions() {
         return executionResultService.getAllExecutions();
     }
@@ -38,13 +40,13 @@ public class ExecutionResultController {
             @RequestParam String language,
             @RequestParam String code,
             @RequestParam String result,
-            @RequestParam Long sessionId) {
-        return executionResultService.createExecution(language, code, result, sessionId);
+            @RequestParam Long consoleId) { // Используем consoleId вместо sessionId
+        return executionResultService.createExecution(language, code, result, consoleId);
     }
 
     @PutMapping("/{id}")
     public ExecutionResult updateExecution(@PathVariable Long id,
-                                            @RequestBody ExecutionResult executionResult) {
+                                           @RequestBody ExecutionResult executionResult) {
         return executionResultService.updateExecution(id, executionResult);
     }
 

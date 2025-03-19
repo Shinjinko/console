@@ -65,6 +65,7 @@ public class SessionService {
                 .orElseThrow(() -> new RuntimeException("Session not found"));
 
         session.setEndTime(LocalDateTime.now());
+        session.setStatus("END");
         return sessionRepository.save(session);
     }
 

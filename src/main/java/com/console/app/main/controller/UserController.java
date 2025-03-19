@@ -46,6 +46,7 @@ public class UserController {
     }
 
 
+
     @GetMapping
     public List<User> getAllUsers() {
         return userService.getAllUsers();
@@ -75,12 +76,17 @@ public class UserController {
                 .orElseThrow(() -> new UserNotFoundExceptions("User not found with id: " + id));
     }
 
-    //TODO сделать какой-нить возврат
-
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteUser(@PathVariable int id) {
         userService.deleteUser(id);
+    }
+
+    @DeleteMapping("/users/{userId}/consoles/{consoleId}")
+    public ResponseEntity<?> removeConsoleFromUser(@PathVariable Long userId,
+                                                   @PathVariable Long consoleId) {
+        userService.removeConsoleFromUser(userId, consoleId);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/{id}/executions")

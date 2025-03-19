@@ -1,12 +1,9 @@
 package com.console.app.main.service;
 
-import com.console.app.main.exceptions.SessionNotFoundException;
 import com.console.app.main.model.Console;
 import com.console.app.main.model.ExecutionResult;
-import com.console.app.main.model.Session;
 import com.console.app.main.repository.ConsoleRepository;
-import com.console.app.main.service.SessionService;
-import java.time.LocalDateTime;
+import com.console.app.main.repository.ExecutionResultRepository;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import org.springframework.stereotype.Service;
@@ -14,7 +11,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class ConsoleService {
     private final ConsoleRepository consoleRepository;
-    private final SessionService sessionService;
+    private final ExecutionResultRepository executionResultRepository; // Добавляем зависимость
 
     private static final String[] STATUS_MESSAGES = {
         "Выполнено успешно",
@@ -24,9 +21,10 @@ public class ConsoleService {
     };
 
     // Конструктор с двумя зависимостями
-    public ConsoleService(ConsoleRepository consoleRepository, SessionService sessionService) {
+    public ConsoleService(ConsoleRepository consoleRepository,
+                          ExecutionResultRepository executionResultRepository) {
         this.consoleRepository = consoleRepository;
-        this.sessionService = sessionService;
+        this.executionResultRepository = executionResultRepository;
     }
 
     // Методы работы с консолью
@@ -52,17 +50,18 @@ public class ConsoleService {
         consoleRepository.deleteById(id);
     }
 
-    // Исполнение кода с привязкой к сессии
-    public ExecutionResult executeCode(String language, String code, Long userId) {
+    // Исполнение кода с привязкой к консоли
+    public ExecutionResult executeCode(String language, String code, Long consoleId) {
         int randomIndex = ThreadLocalRandom.current().nextInt(STATUS_MESSAGES.length);
         String message = STATUS_MESSAGES[randomIndex];
 
-        // Получаем текущую активную сессию пользователя
-        Session session = sessionService.getActiveSessionByUserId(userId)
-                .orElseThrow(() -> new RuntimeException("No active session found for user"));
+        // Получаем консоль по ID
+        Console console = getConsoleById(consoleId);
 
-        // Создаем объект ExecutionResult с привязкой к сессии
-        ExecutionResult result = new ExecutionResult(language, code, message, session);
-        return result;
+        // Создаем объект ExecutionResult с привязкой к консоли
+        ExecutionResult result = new ExecutionResult(language, code, message, console);
+
+        // Сохраняем результат выполнения в репозитории
+        return executionResultRepository.save(result);
     }
 }

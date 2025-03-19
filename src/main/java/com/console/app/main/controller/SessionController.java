@@ -26,7 +26,7 @@ public class SessionController {
         this.sessionService = sessionService;
     }
 
-    @GetMapping
+    @GetMapping(produces = "application/json")
     public List<Session> getAllSessions() {
         return sessionService.getAllSessions();
     }
@@ -43,7 +43,6 @@ public class SessionController {
         return sessionService.createSession(status, userId);
     }
 
-    //TODO добавить изменение статуса консоли
     @PatchMapping("/{sessionId}/end")
     public Session updateSessionEndTime(@PathVariable Long sessionId) {
         return sessionService.updateSessionEndTime(sessionId);

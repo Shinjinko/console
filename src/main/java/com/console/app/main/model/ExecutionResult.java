@@ -1,6 +1,8 @@
 package com.console.app.main.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -35,8 +37,70 @@ public class ExecutionResult {
     // Связь многие-к-одному с Console
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "console_id", nullable = false)
-    @JsonBackReference
+    @JsonIgnore
     private Console console;
+
+    @JsonProperty("console_id")
+    public Long getUserId() {
+        return console != null ? console.getId() : null;
+    }
+
+    public static ExecutionResultBuilder builder() {
+        return new ExecutionResultBuilder();
+    }
+
+    // Добавляем Builder класс
+    public static class ExecutionResultBuilder {
+        private Long executionId;
+        private String language;
+        private String code;
+        private String result;
+        private LocalDateTime time;
+        private Console console;
+
+        ExecutionResultBuilder() {}
+
+        public ExecutionResultBuilder executionId(Long executionId) {
+            this.executionId = executionId;
+            return this;
+        }
+
+        public ExecutionResultBuilder language(String language) {
+            this.language = language;
+            return this;
+        }
+
+        public ExecutionResultBuilder code(String code) {
+            this.code = code;
+            return this;
+        }
+
+        public ExecutionResultBuilder result(String result) {
+            this.result = result;
+            return this;
+        }
+
+        public ExecutionResultBuilder time(LocalDateTime time) {
+            this.time = time;
+            return this;
+        }
+
+        public ExecutionResultBuilder console(Console console) {
+            this.console = console;
+            return this;
+        }
+
+        public ExecutionResult build() {
+            ExecutionResult result = new ExecutionResult();
+            result.setExecutionId(this.executionId);
+            result.setLanguage(this.language);
+            result.setCode(this.code);
+            result.setResult(this.result);
+            result.setTime(this.time != null ? this.time : LocalDateTime.now());
+            result.setConsole(this.console);
+            return result;
+        }
+    }
 
     // Пустой конструктор (обязателен для JPA)
     public ExecutionResult() {}

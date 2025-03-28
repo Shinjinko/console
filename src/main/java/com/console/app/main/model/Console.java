@@ -28,7 +28,7 @@ public class Console {
     @Column(name = "type", nullable = false)
     private String type; // WEB_TERMINAL, LOCAL_IDE
 
-    @ManyToMany(mappedBy = "consoles")
+    @ManyToMany(mappedBy = "consoles", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonBackReference
     private Set<User> users = new HashSet<>();
 

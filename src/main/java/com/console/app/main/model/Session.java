@@ -1,6 +1,8 @@
 package com.console.app.main.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -21,8 +23,14 @@ public class Session {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
-    @JsonBackReference
+    @JsonIgnore // предотвращает вывод всего объекта User
     private User user;
+
+    // Добавляем user_id в JSON-ответ
+    @JsonProperty("user_id")
+    public Long getUserId() {
+        return Long.valueOf(user != null ? user.getId() : null);
+    }
 
     @Column(name = "start_time", nullable = false)
     private LocalDateTime startTime = LocalDateTime.now();

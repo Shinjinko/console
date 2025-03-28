@@ -3,9 +3,12 @@ package com.console.app.main.controller;
 import com.console.app.main.model.ExecutionResult;
 import com.console.app.main.service.ExecutionResultService;
 import jakarta.transaction.Transactional;
+import java.time.LocalDateTime;
 import java.util.List;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -35,6 +38,41 @@ public class ExecutionResultController {
         return executionResultService.getExecutionById(id);
     }
 
+    @PatchMapping("/{id}/time")
+    public ExecutionResult updateExecutionTime(
+            @PathVariable Long id,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+            LocalDateTime newTime) {
+        return executionResultService.updateExecutionTime(id, newTime);
+    }
+
+    @GetMapping("/filter")
+    public List<ExecutionResult> filterExecutions(
+            @RequestParam String consoleType,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+            LocalDateTime startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+            LocalDateTime endDate,
+            @RequestParam(defaultValue = "false") boolean useNative) {
+
+        if (useNative) {
+            return executionResultService.getExecutionsNative(consoleType,
+                    startDate, endDate);
+        } else {
+            return executionResultService.getExecutionsByConsoleTypeAndTimeRange(consoleType,
+                    startDate, endDate);
+        }
+    }
+
+    @GetMapping("/after-date")
+    public List<ExecutionResult> getExecutionsAfterDate(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+            LocalDateTime dateAfter,
+            @RequestParam(defaultValue = "false") boolean useNative) {
+
+        return executionResultService.getExecutionsAfterDate(dateAfter, useNative);
+    }
+
     @PostMapping("/create")
     public ExecutionResult executeExecution(
             @RequestParam String language,
@@ -55,3 +93,4 @@ public class ExecutionResultController {
         executionResultService.deleteExecution(id);
     }
 }
+

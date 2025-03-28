@@ -4,6 +4,7 @@ import com.console.app.main.model.Console;
 import com.console.app.main.model.ExecutionResult;
 import com.console.app.main.repository.ConsoleRepository;
 import com.console.app.main.repository.ExecutionResultRepository;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import org.springframework.stereotype.Service;
@@ -48,6 +49,19 @@ public class ConsoleService {
 
     public void deleteConsole(Long id) {
         consoleRepository.deleteById(id);
+    }
+
+    public List<ExecutionResult> getExecutionsByConsoleTypeAndTimeRange(String consoleType,
+                                                                        LocalDateTime startDate,
+                                                                        LocalDateTime endDate) {
+        return executionResultRepository
+                .findByConsoleTypeAndTimeBetween(consoleType, startDate, endDate);
+    }
+
+    public List<ExecutionResult> getExecutionsNative(String consoleType, LocalDateTime startDate,
+                        LocalDateTime endDate) {
+        return executionResultRepository
+                .findByConsoleTypeAndTimeBetweenNative(consoleType, startDate, endDate);
     }
 
     // Исполнение кода с привязкой к консоли

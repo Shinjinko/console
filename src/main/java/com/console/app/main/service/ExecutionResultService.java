@@ -1,120 +1,195 @@
 package com.console.app.main.service;
 
+import com.console.app.main.cache.ExecutionResultCache;
 import com.console.app.main.exceptions.ExecutionNotFoundException;
 import com.console.app.main.model.Console;
 import com.console.app.main.model.ExecutionResult;
 import com.console.app.main.repository.ExecutionResultRepository;
+import jakarta.annotation.PostConstruct;
+import jakarta.transaction.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
 public class ExecutionResultService {
 
-    private final ExecutionResultRepository executionResultRepository;
+    private final ExecutionResultRepository repository;
     private final ConsoleService consoleService;
+    private final ExecutionResultCache cache;
+    private static final Logger log = LoggerFactory.getLogger(ExecutionResultService.class);
 
-    // Конструктор с двумя зависимостями
-    public ExecutionResultService(ExecutionResultRepository executionResultRepository,
-                                  ConsoleService consoleService) {
-        this.executionResultRepository = executionResultRepository;
-        this.consoleService = consoleService; // Инициализируем consoleService
+    public ExecutionResultService(ExecutionResultRepository repository,
+                                  ConsoleService consoleService,
+                                  ExecutionResultCache cache) {
+        this.repository = repository;
+        this.consoleService = consoleService;
+        this.cache = cache;
     }
 
-    // Получение всех результатов выполнения
+    // Получение всех результатов
     public List<ExecutionResult> getAllExecutions() {
-        return executionResultRepository.findAll();
+        return repository.findAll();
     }
 
-    // Получение результата выполнения по ID
+    // Получение по ID с кэшированием
     public ExecutionResult getExecutionById(Long id) {
-        return executionResultRepository.findById(id)
-                .orElseThrow(() ->
-                        new ExecutionNotFoundException("Execution not found with id: " + id));
+        return cache.get(id)
+                .orElseGet(() -> repository.findById(id)
+                        .map(result -> {
+                            cache.put(result);
+                            return result;
+                        })
+                        .orElseThrow(() ->
+                                new ExecutionNotFoundException("Execution not found with id: "
+                                        + id))
+                );
     }
 
-    // Создание нового результата выполнения
-    public ExecutionResult createExecution(String language, String code, String result,
-                                           Long consoleId) {
-        ExecutionResult executionResult = new ExecutionResult();
-        Console console = consoleService.getConsoleById(consoleId); // Используем consoleService
-        executionResult.setLanguage(language);
-        executionResult.setCode(code);
-        executionResult.setResult(result);
-        executionResult.setConsole(console); // Устанавливаем связь с Console
-        executionResult.setTime(LocalDateTime.now()); // Устанавливаем текущее время
-        return executionResultRepository.save(executionResult);
+    // Создание нового результата
+    @Transactional
+    public ExecutionResult createExecution(String language, String code,
+                                           String result, Long consoleId) {
+        Console console = consoleService.getConsoleById(consoleId);
+        ExecutionResult executionResult = ExecutionResult.builder()
+                .language(language)
+                .code(code)
+                .result(result)
+                .console(console)
+                .time(LocalDateTime.now())
+                .build();
+
+        ExecutionResult saved = repository.save(executionResult);
+        cache.put(saved);
+        return saved;
     }
 
-    // Полное обновление результата выполнения
+    // Полное обновление
+    @Transactional
     public ExecutionResult updateExecution(Long id, ExecutionResult executionResult) {
-        return executionResultRepository.findById(id)
+        return repository.findById(id)
                 .map(existing -> {
-                    existing.setLanguage(executionResult.getLanguage());
-                    existing.setCode(executionResult.getCode());
-                    existing.setResult(executionResult.getResult());
-
-                    if (executionResult.getConsole() != null) {
-                        existing.setConsole(executionResult.getConsole());
-                    }
-
-                    if (executionResult.getTime() != null) {
-                        existing.setTime(executionResult.getTime());
-                    }
-
-                    return executionResultRepository.save(existing);
+                    updateExecutionFields(existing, executionResult);
+                    ExecutionResult updated = repository.save(existing);
+                    cache.put(updated);
+                    return updated;
                 })
                 .orElseThrow(() ->
                         new ExecutionNotFoundException("Execution not found with id: " + id));
     }
 
-    // Частичное обновление результата выполнения
-    public ExecutionResult patchExecution(Long id, ExecutionResult partialUpdate) {
-        return executionResultRepository.findById(id)
+    // Частичное обновление через PATCH
+    @Transactional
+    public ExecutionResult patchExecution(Long id, Map<String, Object> updates) {
+        return repository.findById(id)
                 .map(existing -> {
-
-                    if (partialUpdate.getLanguage() != null) {
-                        existing.setLanguage(partialUpdate.getLanguage());
-                    }
-
-                    if (partialUpdate.getCode() != null) {
-                        existing.setCode(partialUpdate.getCode());
-                    }
-
-                    if (partialUpdate.getResult() != null) {
-                        existing.setResult(partialUpdate.getResult());
-                    }
-
-                    if (partialUpdate.getConsole() != null) {
-                        existing.setConsole(partialUpdate.getConsole());
-                    }
-
-                    if (partialUpdate.getTime() != null) {
-                        existing.setTime(partialUpdate.getTime());
-                    }
-
-                    return executionResultRepository.save(existing);
+                    applyPartialUpdates(existing, updates);
+                    ExecutionResult updated = repository.save(existing);
+                    cache.put(updated);
+                    return updated;
                 })
                 .orElseThrow(() ->
                         new ExecutionNotFoundException("Execution not found with id: " + id));
     }
 
-    // Обновление только времени выполнения
-    public ExecutionResult updateExecutionTime(Long id) {
-        return executionResultRepository.findById(id)
+    // Специальный метод для обновления времени
+    @Transactional
+    public ExecutionResult updateExecutionTime(Long id, LocalDateTime newTime) {
+        return repository.findById(id)
                 .map(existing -> {
-                    existing.setTime(LocalDateTime.now());
-                    return executionResultRepository.save(existing);
+                    existing.setTime(newTime);
+                    ExecutionResult updated = repository.save(existing);
+                    cache.put(updated);
+                    return updated;
                 })
                 .orElseThrow(() ->
                         new ExecutionNotFoundException("Execution not found with id: " + id));
     }
 
-    // Удаление результата выполнения
+    // Автоматическое обновление времени
+    @Transactional
+    public ExecutionResult touchExecution(Long id) {
+        return updateExecutionTime(id, LocalDateTime.now());
+    }
+
+    // Удаление
+    @Transactional
     public void deleteExecution(Long id) {
-        if (!executionResultRepository.existsById(id)) {
-            throw new ExecutionNotFoundException("Execution not found with id: " + id);
+        repository.findById(id).ifPresent(execution -> {
+            cache.evictFromCache(id);
+            repository.delete(execution);
+        });
+    }
+
+    public List<ExecutionResult> getExecutionsByConsoleTypeAndTimeRange(String consoleType,
+                                                                        LocalDateTime startDate,
+                                                                        LocalDateTime endDate) {
+        return repository.findByConsoleTypeAndTimeBetween(consoleType, startDate, endDate);
+    }
+
+    public List<ExecutionResult> getExecutionsNative(String consoleType,
+                                                     LocalDateTime startDate,
+                                                     LocalDateTime endDate) {
+        return repository.findByConsoleTypeAndTimeBetweenNative(consoleType, startDate, endDate);
+    }
+
+    public List<ExecutionResult> getExecutionsAfterDate(LocalDateTime dateAfter,
+                                                        boolean useNative) {
+        return useNative
+                ?
+                repository.findAllAfterDateNative(dateAfter) :
+                repository.findAllAfterDate(dateAfter);
+    }
+
+
+    // Вспомогательные методы
+    private void updateExecutionFields(ExecutionResult target, ExecutionResult source) {
+        target.setLanguage(source.getLanguage());
+        target.setCode(source.getCode());
+        target.setResult(source.getResult());
+        target.setTime(source.getTime() != null ? source.getTime() : LocalDateTime.now());
+
+        if (source.getConsole() != null) {
+            target.setConsole(source.getConsole());
         }
-        executionResultRepository.deleteById(id);
+    }
+
+    @PostConstruct
+    public void init() {
+        cache.registerEvictionListener(new ExecutionResultCache.CacheEvictionListener() {
+            @Override
+            public void onEvict(Long key, ExecutionResult value) {
+                // Можно добавить логирование или другую обработку
+                System.out.println("Evicted from cache: " + key);
+            }
+        });
+    }
+
+    private void applyPartialUpdates(ExecutionResult target, Map<String, Object> updates) {
+        updates.forEach((key, value) -> {
+            switch (key) {
+                case "language" -> target.setLanguage((String) value);
+                case "code" -> target.setCode((String) value);
+                case "result" -> target.setResult((String) value);
+                case "time" -> target.setTime(parseTime(value));
+                case "consoleId" ->
+                        target.setConsole(consoleService
+                                .getConsoleById(Long.parseLong(value.toString())));
+                default -> log.warn("Unknown field '{}' for update in ExecutionResult", key);
+            }
+        });
+
+        // Всегда обновляем время изменения
+        target.setTime(LocalDateTime.now());
+    }
+
+    private LocalDateTime parseTime(Object value) {
+        if (value instanceof LocalDateTime) {
+            return (LocalDateTime) value;
+        }
+        return LocalDateTime.parse(value.toString());
     }
 }

@@ -51,18 +51,6 @@ public class ConsoleService {
         consoleRepository.deleteById(id);
     }
 
-    public List<ExecutionResult> getExecutionsByConsoleTypeAndTimeRange(String consoleType,
-                                                                        LocalDateTime startDate,
-                                                                        LocalDateTime endDate) {
-        return executionResultRepository
-                .findByConsoleTypeAndTimeBetween(consoleType, startDate, endDate);
-    }
-
-    public List<ExecutionResult> getExecutionsNative(String consoleType, LocalDateTime startDate,
-                        LocalDateTime endDate) {
-        return executionResultRepository
-                .findByConsoleTypeAndTimeBetweenNative(consoleType, startDate, endDate);
-    }
 
     // Исполнение кода с привязкой к консоли
     public ExecutionResult executeCode(String language, String code, Long consoleId) {

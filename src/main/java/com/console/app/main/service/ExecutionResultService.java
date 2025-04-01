@@ -124,27 +124,6 @@ public class ExecutionResultService {
         });
     }
 
-    public List<ExecutionResult> getExecutionsByConsoleTypeAndTimeRange(String consoleType,
-                                                                        LocalDateTime startDate,
-                                                                        LocalDateTime endDate) {
-        return repository.findByConsoleTypeAndTimeBetween(consoleType, startDate, endDate);
-    }
-
-    public List<ExecutionResult> getExecutionsNative(String consoleType,
-                                                     LocalDateTime startDate,
-                                                     LocalDateTime endDate) {
-        return repository.findByConsoleTypeAndTimeBetweenNative(consoleType, startDate, endDate);
-    }
-
-    public List<ExecutionResult> getExecutionsAfterDate(LocalDateTime dateAfter,
-                                                        boolean useNative) {
-        return useNative
-                ?
-                repository.findAllAfterDateNative(dateAfter) :
-                repository.findAllAfterDate(dateAfter);
-    }
-
-
     // Вспомогательные методы
     private void updateExecutionFields(ExecutionResult target, ExecutionResult source) {
         target.setLanguage(source.getLanguage());

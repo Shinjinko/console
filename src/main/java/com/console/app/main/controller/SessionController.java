@@ -43,6 +43,11 @@ public class SessionController {
         return sessionService.createSession(status, userId);
     }
 
+    @GetMapping("/filter/name/{name}")
+    public List<Session> filterSessionsByUserName(@PathVariable String name) {
+        return sessionService.getSessionsByUserName(name);
+    }
+
     @PatchMapping("/{sessionId}/end")
     public Session updateSessionEndTime(@PathVariable Long sessionId) {
         return sessionService.updateSessionEndTime(sessionId);

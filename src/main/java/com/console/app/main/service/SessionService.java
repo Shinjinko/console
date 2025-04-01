@@ -58,7 +58,10 @@ public class SessionService {
         return sessionRepository.save(session);
     }
 
-
+    @Transactional(readOnly = true)
+    public List<Session> getSessionsByUserName(String name) {
+        return sessionRepository.findAllByUserName(name);
+    }
 
     public Session updateSessionEndTime(Long sessionId) {
         Session session = sessionRepository.findById(sessionId)

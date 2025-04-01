@@ -46,33 +46,6 @@ public class ExecutionResultController {
         return executionResultService.updateExecutionTime(id, newTime);
     }
 
-    @GetMapping("/filter")
-    public List<ExecutionResult> filterExecutions(
-            @RequestParam String consoleType,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-            LocalDateTime startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-            LocalDateTime endDate,
-            @RequestParam(defaultValue = "false") boolean useNative) {
-
-        if (useNative) {
-            return executionResultService.getExecutionsNative(consoleType,
-                    startDate, endDate);
-        } else {
-            return executionResultService.getExecutionsByConsoleTypeAndTimeRange(consoleType,
-                    startDate, endDate);
-        }
-    }
-
-    @GetMapping("/after-date")
-    public List<ExecutionResult> getExecutionsAfterDate(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-            LocalDateTime dateAfter,
-            @RequestParam(defaultValue = "false") boolean useNative) {
-
-        return executionResultService.getExecutionsAfterDate(dateAfter, useNative);
-    }
-
     @PostMapping("/create")
     public ExecutionResult executeExecution(
             @RequestParam String language,

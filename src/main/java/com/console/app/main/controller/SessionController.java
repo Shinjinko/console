@@ -3,6 +3,8 @@ package com.console.app.main.controller;
 import com.console.app.main.model.Session;
 import com.console.app.main.service.SessionService;
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -44,15 +46,16 @@ public class SessionController {
             description = "Creates a new session with the specified status and user ID")
     @PostMapping("/create")
     public Session createSession(
-            @RequestParam String status,
-            @RequestParam Long userId) {
+            @RequestParam @NotBlank(message = "Status is required") String status,
+            @RequestParam @NotNull(message = "User ID is required") Long userId) {
         return sessionService.createSession(status, userId);
     }
 
     @Operation(summary = "Filter sessions by user name",
             description = "Retrieves sessions filtered by user name")
     @GetMapping("/filter/name/{name}")
-    public List<Session> filterSessionsByUserName(@PathVariable String name) {
+    public List<Session> filterSessionsByUserName(
+            @PathVariable @NotBlank(message = "Name is required") String name) {
         return sessionService.getSessionsByUserName(name);
     }
 

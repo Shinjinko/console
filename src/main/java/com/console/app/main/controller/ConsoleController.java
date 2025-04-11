@@ -3,6 +3,8 @@ package com.console.app.main.controller;
 import com.console.app.main.model.Console;
 import com.console.app.main.service.ConsoleService;
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
@@ -35,9 +37,8 @@ public class ConsoleController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public Console createConsole(
-            @RequestParam String name,
-            @RequestParam String type
-    ) {
+            @RequestParam @NotBlank(message = "Name is required") String name,
+            @RequestParam @NotBlank(message = "Type is required") String type) {
         Console console = new Console();
         console.setName(name);
         console.setType(type);
@@ -46,7 +47,7 @@ public class ConsoleController {
 
     @Operation(summary = "Delete a console", description = "Deletes a console by its ID")
     @DeleteMapping
-    public void deleteConsole(@RequestParam Long id) {
+    public void deleteConsole(@RequestParam @NotNull(message = "ID is required") Long id) {
         consoleService.deleteConsole(id);
     }
 }

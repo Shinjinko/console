@@ -17,17 +17,6 @@ public class GlobalExceptionHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-//    // Добавляем обработку ValidationException
-//    @ExceptionHandler(ValidationException.class)
-//    @ResponseStatus(HttpStatus.BAD_REQUEST)
-//    public ResponseEntity<Map<String, Object>> handleValidationException(ValidationException ex) {
-//        Map<String, Object> response = new HashMap<>();
-//        response.put("error", ex.getMessage());
-//        response.put("code", ex.getErrorCode());
-//        logger.warn("Custom validation error: {}", ex.getMessage());
-//        return ResponseEntity.badRequest().body(response);
-//    }
-
     // Добавляем обработку MethodArgumentNotValidException
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)

@@ -4,6 +4,8 @@ import com.console.app.main.model.ExecutionResult;
 import com.console.app.main.service.ExecutionResultService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.transaction.Transactional;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -47,8 +49,9 @@ public class ExecutionResultController {
             description = "Updates the timestamp of a specific execution")
     @PatchMapping("/{id}/time")
     public ExecutionResult updateExecutionTime(
-            @PathVariable Long id,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+            @PathVariable @NotNull(message = "ID is required") Long id,
+            @RequestParam @NotNull(message = "New time is required")
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
             LocalDateTime newTime) {
         return executionResultService.updateExecutionTime(id, newTime);
     }
@@ -57,10 +60,10 @@ public class ExecutionResultController {
             description = "Creates a new execution result with the specified parameters")
     @PostMapping("/create")
     public ExecutionResult executeExecution(
-            @RequestParam String language,
-            @RequestParam String code,
-            @RequestParam String result,
-            @RequestParam Long consoleId) { // Используем consoleId вместо sessionId
+            @RequestParam @NotBlank(message = "Language is required") String language,
+            @RequestParam @NotBlank(message = "Code is required") String code,
+            @RequestParam @NotBlank(message = "Result is required") String result,
+            @RequestParam @NotNull(message = "Console ID is required") Long consoleId) {
         return executionResultService.createExecution(language, code, result, consoleId);
     }
 

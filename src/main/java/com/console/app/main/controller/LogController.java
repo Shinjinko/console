@@ -1,6 +1,7 @@
 package com.console.app.main.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.validation.constraints.NotNull;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -27,7 +28,8 @@ public class LogController {
             description = "Retrieves and saves logs filtered by a specific date")
     @GetMapping("/by-date")
     public ResponseEntity<String> getLogsByDate(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+            @RequestParam @NotNull(message = "Date is required")
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
 
         try {
             // Читаем все строки из основного лог-файла

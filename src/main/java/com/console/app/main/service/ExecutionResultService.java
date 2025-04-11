@@ -32,12 +32,18 @@ public class ExecutionResultService {
 
     // Получение всех результатов
     public List<ExecutionResult> getAllExecutions() {
-        return repository.findAll();
+        List<ExecutionResult> results = repository.findAll();
+        results.forEach(cache::put);
+        return results;
     }
 
     // Получение по ID с кэшированием
     public ExecutionResult getExecutionById(Long id) {
         return cache.get(id)
+                .map(result -> {
+                    log.info("Cache for id: {}", id);
+                    return result;
+                })
                 .orElseGet(() -> repository.findById(id)
                         .map(result -> {
                             cache.put(result);

@@ -10,7 +10,7 @@ public class ExecutionNotFoundException extends RuntimeException {
     }
 
     @ExceptionHandler(ExecutionNotFoundException.class)
-    @ResponseStatus(HttpStatus.NOT_FOUND)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
     public String handleExecutionNotFoundException(ExecutionNotFoundException ex) {
         return ex.getMessage();
     }

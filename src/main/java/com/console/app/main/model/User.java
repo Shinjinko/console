@@ -1,6 +1,7 @@
 package com.console.app.main.model;
 
 import com.fasterxml.jackson.annotation.JsonManagedReference;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -18,11 +19,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+@Schema(description = "User entity")
 @Entity
 @Table(name = "users")
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Schema(description = "User ID", example = "1")
     private int id;
 
     @Column(nullable = false, unique = true)

@@ -2,6 +2,7 @@ package com.console.app.main.controller;
 
 import com.console.app.main.model.ExecutionResult;
 import com.console.app.main.service.ExecutionResultService;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.transaction.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -27,17 +28,23 @@ public class ExecutionResultController {
         this.executionResultService = executionResultService;
     }
 
+    @Operation(summary = "Get all executions",
+            description = "Retrieves a list of all execution results")
     @Transactional
     @GetMapping(produces = "application/json")
     public List<ExecutionResult> getAllExecutions() {
         return executionResultService.getAllExecutions();
     }
 
+    @Operation(summary = "Get execution by ID",
+            description = "Retrieves a specific execution result by its ID")
     @GetMapping("/{id}")
     public ExecutionResult getExecutionById(@PathVariable Long id) {
         return executionResultService.getExecutionById(id);
     }
 
+    @Operation(summary = "Update execution time",
+            description = "Updates the timestamp of a specific execution")
     @PatchMapping("/{id}/time")
     public ExecutionResult updateExecutionTime(
             @PathVariable Long id,
@@ -46,6 +53,8 @@ public class ExecutionResultController {
         return executionResultService.updateExecutionTime(id, newTime);
     }
 
+    @Operation(summary = "Create execution",
+            description = "Creates a new execution result with the specified parameters")
     @PostMapping("/create")
     public ExecutionResult executeExecution(
             @RequestParam String language,
@@ -55,12 +64,15 @@ public class ExecutionResultController {
         return executionResultService.createExecution(language, code, result, consoleId);
     }
 
+    @Operation(summary = "Update execution",
+            description = "Updates all fields of an execution result")
     @PutMapping("/{id}")
     public ExecutionResult updateExecution(@PathVariable Long id,
                                            @RequestBody ExecutionResult executionResult) {
         return executionResultService.updateExecution(id, executionResult);
     }
 
+    @Operation(summary = "Delete execution", description = "Deletes an execution result by its ID")
     @DeleteMapping("/{id}")
     public void deleteExecution(@PathVariable Long id) {
         executionResultService.deleteExecution(id);

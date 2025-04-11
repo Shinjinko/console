@@ -1,5 +1,6 @@
 package com.console.app.main.service;
 
+import com.console.app.main.exceptions.ValidationException;
 import com.console.app.main.model.Console;
 import com.console.app.main.model.ExecutionResult;
 import com.console.app.main.model.User;
@@ -8,6 +9,7 @@ import com.console.app.main.repository.UserRepository;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,7 +18,6 @@ public class UserService {
     private final UserRepository userRepository;
     private final ConsoleRepository consoleRepository;
 
-    // Убрали PasswordEncoder из конструктора
     public UserService(UserRepository userRepository, ConsoleRepository consoleRepository) {
         this.userRepository = userRepository;
         this.consoleRepository = consoleRepository;
@@ -35,12 +36,20 @@ public class UserService {
     }
 
     public User createUser(String name, String email, String password) {
-        User user = new User();
-        user.setName(name);
-        user.setEmail(email);
-        user.setPassword(password);
-        return userRepository.save(user);
-
+        try {
+            User user = new User();
+            user.setName(name);
+            user.setEmail(email);
+            user.setPassword(password);
+            return userRepository.save(user);
+        } catch (DataIntegrityViolationException e) {
+            if (e.getMessage().contains("users_name_key")) {
+                throw new ValidationException("User with this name already exists", 404);
+            } else if (e.getMessage().contains("users_email_key")) {
+                throw new ValidationException("User with this email already exists", 404);
+            }
+            throw new ValidationException("Database error: " + e.getMessage(), 404);
+        }
     }
 
     @Transactional

@@ -56,7 +56,8 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(ValidationException.class)
-    public ResponseEntity<Map<String, Object>> handleCustomValidationException(ValidationException ex) {
+    public ResponseEntity<Map<String,
+            Object>> handleCustomValidationException(ValidationException ex) {
         Map<String, Object> response = new HashMap<>();
         response.put("error", ex.getMessage());
         response.put("code", ex.getErrorCode());

@@ -47,6 +47,14 @@ public class ConsoleService {
         return consoleRepository.save(console);
     }
 
+    public List<Console> createConsolesBulk(List<Console> consoles) {
+        return consoles.stream()
+                .filter(console -> console.getName() != null && !console.getName().isEmpty())
+                .filter(console -> console.getType() != null && !console.getType().isEmpty())
+                .map(consoleRepository::save)
+                .toList();
+    }
+
     public void deleteConsole(Long id) {
         consoleRepository.deleteById(id);
     }

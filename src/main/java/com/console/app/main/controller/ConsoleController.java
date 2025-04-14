@@ -11,6 +11,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -27,13 +28,15 @@ public class ConsoleController {
         this.consoleService = consoleService;
     }
 
-    @Operation(summary = "Get all consoles", description = "Retrieves a list of all available consoles")
+    @Operation(summary = "Get all consoles",
+            description = "Retrieves a list of all available consoles")
     @GetMapping(produces = "application/json")
     public List<Console> getAllConsoles() {
         return consoleService.getAllConsoles();
     }
 
-    @Operation(summary = "Create a new console", description = "Creates a new console with the specified name and type")
+    @Operation(summary = "Create a new console",
+            description = "Creates a new console with the specified name and type")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public Console createConsole(
@@ -43,6 +46,14 @@ public class ConsoleController {
         console.setName(name);
         console.setType(type);
         return consoleService.createConsole(console);
+    }
+
+    @Operation(summary = "Bulk create consoles",
+            description = "Creates multiple consoles from a list")
+    @PostMapping("/bulk")
+    @ResponseStatus(HttpStatus.CREATED)
+    public List<Console> createConsolesBulk(@RequestBody List<Console> consoles) {
+        return consoleService.createConsolesBulk(consoles);
     }
 
     @Operation(summary = "Delete a console", description = "Deletes a console by its ID")

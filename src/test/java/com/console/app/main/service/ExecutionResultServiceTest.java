@@ -5,6 +5,7 @@ import com.console.app.main.exceptions.ExecutionNotFoundException;
 import com.console.app.main.model.Console;
 import com.console.app.main.model.ExecutionResult;
 import com.console.app.main.repository.ExecutionResultRepository;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -51,6 +52,27 @@ class ExecutionResultServiceTest {
         verify(cache, times(1)).put(result2);
         verify(repository, times(1)).findAll();
     }
+
+    @Test
+    void getExecutionById_ShouldThrowException_WhenNotFound() {
+        // Arrange
+        Long id = 42L;
+
+        when(cache.get(id)).thenReturn(Optional.empty());
+        when(repository.findById(id)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        ExecutionNotFoundException exception = assertThrows(
+                ExecutionNotFoundException.class,
+                () -> executionResultService.getExecutionById(id)
+        );
+
+        assertEquals("Execution not found with id: " + id, exception.getMessage());
+
+        verify(cache, times(1)).get(id);
+        verify(repository, times(1)).findById(id);
+    }
+
 
     @Test
     void getExecutionById_ShouldReturnFromCache_WhenExists() {
@@ -124,5 +146,79 @@ class ExecutionResultServiceTest {
         // Assert
         verify(cache, times(1)).evictFromCache(1L);
         verify(repository, times(1)).delete(result);
+    }
+
+    @Test
+    void updateExecution_ShouldUpdateFieldsAndCache() {
+        // Arrange
+        ExecutionResult existing = new ExecutionResult("java", "old", "old", new Console());
+        existing.setExecutionId(1L);
+
+        ExecutionResult updates = new ExecutionResult("python", "new", "new", new Console());
+
+        when(repository.findById(1L)).thenReturn(Optional.of(existing));
+        when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        ExecutionResult result = executionResultService.updateExecution(1L, updates);
+
+        // Assert
+        assertEquals("python", result.getLanguage());
+        assertEquals("new", result.getCode());
+        verify(cache, times(1)).put(result);
+    }
+
+    @Test
+    void patchExecution_ShouldApplyPartialUpdates() {
+        // Arrange
+        ExecutionResult existing = new ExecutionResult("java", "code", "old", new Console());
+        existing.setExecutionId(1L);
+
+        when(repository.findById(1L)).thenReturn(Optional.of(existing));
+        when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        ExecutionResult result = executionResultService.patchExecution(1L,
+                Map.of("language", "python", "result", "success"));
+
+        // Assert
+        assertEquals("python", result.getLanguage());
+        assertEquals("success", result.getResult());
+        verify(cache, times(1)).put(result);
+    }
+
+    @Test
+    void updateExecutionTime_ShouldUpdateTime() {
+        // Arrange
+        ExecutionResult existing = new ExecutionResult("java", "code", "old", new Console());
+        existing.setExecutionId(1L);
+        LocalDateTime newTime = LocalDateTime.now().plusHours(1);
+
+        when(repository.findById(1L)).thenReturn(Optional.of(existing));
+        when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        ExecutionResult result = executionResultService.updateExecutionTime(1L, newTime);
+
+        // Assert
+        assertEquals(newTime, result.getTime());
+        verify(cache, times(1)).put(result);
+    }
+
+    @Test
+    void touchExecution_ShouldUpdateTimeToNow() {
+        // Arrange
+        ExecutionResult existing = new ExecutionResult("java", "code", "old", new Console());
+        existing.setExecutionId(1L);
+
+        when(repository.findById(1L)).thenReturn(Optional.of(existing));
+        when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        ExecutionResult result = executionResultService.touchExecution(1L);
+
+        // Assert
+        assertNotNull(result.getTime());
+        verify(cache, times(1)).put(result);
     }
 }

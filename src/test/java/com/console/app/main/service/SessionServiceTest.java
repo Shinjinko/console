@@ -3,6 +3,7 @@ package com.console.app.main.service;
 import com.console.app.main.exceptions.SessionNotFoundException;
 import com.console.app.main.model.Session;
 import com.console.app.main.model.User;
+import com.console.app.main.repository.ConsoleRepository;
 import com.console.app.main.repository.SessionRepository;
 import com.console.app.main.repository.UserRepository;
 import org.junit.jupiter.api.Test;
@@ -29,6 +30,9 @@ class SessionServiceTest {
 
     @InjectMocks
     private SessionService sessionService;
+
+    @Mock
+    private ConsoleRepository consoleRepository;
 
     @Test
     void createSession_ShouldCreateNewSession() {
@@ -106,5 +110,171 @@ class SessionServiceTest {
         // Act & Assert
         assertThrows(SessionNotFoundException.class, () -> sessionService.deleteSession(1L));
         verify(sessionRepository, never()).deleteById(any());
+    }
+
+    @Test
+    void getSessionById_ShouldReturnSession_WhenExists() {
+        // Arrange
+        Session session = new Session();
+        session.setId(1L);
+
+        when(sessionRepository.findById(1L)).thenReturn(Optional.of(session));
+
+        // Act
+        Session result = sessionService.getSessionById(1L);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(1L, result.getId());
+    }
+
+    @Test
+    void getSessionById_ShouldThrowException_WhenNotExists() {
+        // Arrange
+        when(sessionRepository.findById(1L)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThrows(SessionNotFoundException.class, () -> sessionService.getSessionById(1L));
+    }
+
+    @Test
+    void updateSession_ShouldUpdateAllFields() {
+        // Arrange
+        User user = new User();
+        user.setId(1);
+
+        Session existing = new Session();
+        existing.setId(1L);
+
+        Session updates = new Session();
+        updates.setUser(user);
+        updates.setStartTime(LocalDateTime.now());
+        updates.setEndTime(LocalDateTime.now().plusHours(1));
+        updates.setStatus("UPDATED");
+
+        when(sessionRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(userRepository.existsById(1)).thenReturn(true);
+        when(sessionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        Session result = sessionService.updateSession(1L, updates);
+
+        // Assert
+        assertEquals(user, result.getUser());
+        assertEquals("UPDATED", result.getStatus());
+        verify(sessionRepository, times(1)).save(existing);
+    }
+
+    @Test
+    void getAllSessions_ShouldReturnAllSessions() {
+        // Arrange
+        Session session1 = new Session();
+        Session session2 = new Session();
+
+        when(sessionRepository.findAll()).thenReturn(List.of(session1, session2));
+
+        // Act
+        List<Session> result = sessionService.getAllSessions();
+
+        // Assert
+        assertEquals(2, result.size());
+    }
+
+    @Test
+    void getActiveSessionByUserId_ShouldReturnSession_WhenExists() {
+        // Arrange
+        Session session = new Session();
+        session.setId(1L);
+
+        when(sessionRepository.findActiveSessionByUserId(1L)).thenReturn(Optional.of(session));
+
+        // Act
+        Optional<Session> result = sessionService.getActiveSessionByUserId(1L);
+
+        // Assert
+        assertTrue(result.isPresent());
+        assertEquals(1L, result.get().getId());
+    }
+
+    @Test
+    void getActiveSessionByUserId_ShouldReturnEmpty_WhenNotExists() {
+        // Arrange
+        when(sessionRepository.findActiveSessionByUserId(1L)).thenReturn(Optional.empty());
+
+        // Act
+        Optional<Session> result = sessionService.getActiveSessionByUserId(1L);
+
+        // Assert
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void getSessionsByUserName_ShouldReturnSessions() {
+        // Arrange
+        Session session1 = new Session();
+        Session session2 = new Session();
+
+        when(sessionRepository.findAllByUserName("testUser")).thenReturn(List.of(session1, session2));
+
+        // Act
+        List<Session> result = sessionService.getSessionsByUserName("testUser");
+
+        // Assert
+        assertEquals(2, result.size());
+    }
+
+    @Test
+    void getSessionsByUserName_ShouldReturnEmptyList_WhenNoneExist() {
+        // Arrange
+        when(sessionRepository.findAllByUserName("unknownUser")).thenReturn(List.of());
+
+        // Act
+        List<Session> result = sessionService.getSessionsByUserName("unknownUser");
+
+        // Assert
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void validateUserExists_ShouldNotThrow_WhenUserExists() {
+        // Arrange
+        User user = new User();
+        user.setId(1);
+
+        when(userRepository.existsById(1)).thenReturn(true);
+
+        // Act & Assert
+        assertDoesNotThrow(() -> sessionService.validateUserExists(user));
+    }
+
+    @Test
+    void validateUserExists_ShouldThrow_WhenUserDoesNotExist() {
+        // Arrange
+        User user = new User();
+        user.setId(1);
+
+        when(userRepository.existsById(1)).thenReturn(false);
+
+        // Act & Assert
+        assertThrows(IllegalArgumentException.class, () -> sessionService.validateUserExists(user));
+    }
+
+    @Test
+    void validateUserExists_ShouldNotThrow_WhenUserIsNull() {
+        // Act & Assert
+        assertDoesNotThrow(() -> sessionService.validateUserExists(null));
+    }
+
+    @Test
+    void getConsoleRepository_ShouldReturnConsoleRepository() {
+        // Arrange
+        // No need for additional setup since we're just testing the getter
+
+        // Act
+        ConsoleRepository result = sessionService.getConsoleRepository();
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(consoleRepository, result); // Verify it returns the mocked instance
     }
 }

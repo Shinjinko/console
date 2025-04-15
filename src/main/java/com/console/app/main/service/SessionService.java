@@ -111,7 +111,7 @@ public class SessionService {
         sessionRepository.deleteById(id);
     }
 
-    private void validateUserExists(User user) {
+    void validateUserExists(User user) {
         if (user != null && !userRepository.existsById(user.getId())) {
             throw new IllegalArgumentException("User not found with id: " + user.getId());
         }

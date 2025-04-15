@@ -43,9 +43,15 @@ public class ConsoleService {
     }
 
     public Console updateConsole(Long id, Console console) {
-        console.setId(id);
-        return consoleRepository.save(console);
+        Console existingConsole = consoleRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Console not found"));
+
+        existingConsole.setName(console.getName());
+        existingConsole.setType(console.getType());
+
+        return consoleRepository.save(existingConsole);
     }
+
 
     public List<Console> createConsolesBulk(List<Console> consoles) {
         return consoles.stream()
@@ -65,13 +71,9 @@ public class ConsoleService {
         int randomIndex = ThreadLocalRandom.current().nextInt(STATUS_MESSAGES.length);
         String message = STATUS_MESSAGES[randomIndex];
 
-        // Получаем консоль по ID
         Console console = getConsoleById(consoleId);
-
-        // Создаем объект ExecutionResult с привязкой к консоли
         ExecutionResult result = new ExecutionResult(language, code, message, console);
 
-        // Сохраняем результат выполнения в репозитории
-        return executionResultRepository.save(result);
+        return executionResultRepository.save(result); // Должен возвращать сохранённый объект
     }
 }

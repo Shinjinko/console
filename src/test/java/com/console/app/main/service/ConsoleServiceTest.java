@@ -104,6 +104,11 @@ class ConsoleServiceTest {
 
         when(consoleRepository.findById(1L)).thenReturn(Optional.of(console));
 
+        // Мокируем сохранение результата
+        ExecutionResult mockResult = new ExecutionResult("java", "System.out.println(\"Hello\");",
+                "Выполнено успешно", console);
+        when(executionResultRepository.save(any(ExecutionResult.class))).thenReturn(mockResult);
+
         // Act
         ExecutionResult result = consoleService.executeCode("java", "System.out.println(\"Hello\");", 1L);
 
@@ -112,6 +117,110 @@ class ConsoleServiceTest {
         assertEquals("java", result.getLanguage());
         assertNotNull(result.getResult());
         assertEquals(console, result.getConsole());
-        verify(executionResultRepository, times(1)).save(result);
+        verify(executionResultRepository, times(1)).save(any(ExecutionResult.class));
+    }
+
+    @Test
+    void createConsolesBulk_ShouldSaveValidConsoles() {
+        // Arrange
+        Console console1 = new Console();
+        console1.setName("Valid 1");
+        console1.setType("Type 1");
+
+        Console console2 = new Console();
+        console2.setName("Valid 2");
+        console2.setType("Type 2");
+
+        Console invalidConsole = new Console(); // Без имени и типа
+
+        when(consoleRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        List<Console> result = consoleService.createConsolesBulk(
+                List.of(console1, console2, invalidConsole));
+
+        // Assert
+        assertEquals(2, result.size());
+        verify(consoleRepository, times(2)).save(any());
+    }
+
+    @Test
+    void updateConsole_ShouldUpdateExistingConsole() {
+        // Arrange
+        Console existing = new Console();
+        existing.setId(1L);
+        existing.setName("Old Name");
+        existing.setType("Old Type");
+
+        Console updated = new Console();
+        updated.setName("New Name");
+        updated.setType("New Type");
+
+        when(consoleRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(consoleRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        Console result = consoleService.updateConsole(1L, updated);
+
+        // Assert
+        assertEquals("New Name", result.getName());
+        assertEquals("New Type", result.getType());
+        assertEquals(1L, result.getId());
+        verify(consoleRepository, times(1)).save(existing);
+    }
+
+    @Test
+    void createConsolesBulk_ShouldIgnoreInvalidConsoles() {
+        // Arrange
+        Console validConsole = new Console();
+        validConsole.setName("Valid");
+        validConsole.setType("Type");
+
+        Console nullNameConsole = new Console();
+        nullNameConsole.setType("Type");
+
+        Console emptyNameConsole = new Console();
+        emptyNameConsole.setName("");
+        emptyNameConsole.setType("Type");
+
+        when(consoleRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        List<Console> result = consoleService.createConsolesBulk(
+                List.of(validConsole, nullNameConsole, emptyNameConsole));
+
+        // Assert
+        assertEquals(1, result.size());
+        assertEquals("Valid", result.getFirst().getName());
+        verify(consoleRepository, times(1)).save(any());
+    }
+
+    @Test
+    void updateConsole_ShouldThrowException_WhenConsoleNotFound() {
+        // Arrange
+        Long id = 1L;
+        Console updated = new Console();
+        updated.setName("New Name");
+
+        when(consoleRepository.findById(id)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThrows(RuntimeException.class, () -> consoleService.updateConsole(id, updated));
+
+        verify(consoleRepository, times(1)).findById(id);
+        verify(consoleRepository, never()).save(any());
+    }
+
+
+    @Test
+    void deleteConsole_ShouldDeleteConsole() {
+        // Arrange
+        doNothing().when(consoleRepository).deleteById(1L);
+
+        // Act
+        consoleService.deleteConsole(1L);
+
+        // Assert
+        verify(consoleRepository, times(1)).deleteById(1L);
     }
 }

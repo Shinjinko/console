@@ -2,6 +2,7 @@ package com.console.app.main.controller;
 
 import com.console.app.main.model.Console;
 import com.console.app.main.service.ConsoleService;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -52,8 +53,18 @@ public class ConsoleController {
             description = "Creates multiple consoles from a list")
     @PostMapping("/bulk")
     @ResponseStatus(HttpStatus.CREATED)
+    @JsonIgnoreProperties({"users", "executionResults"})
     public List<Console> createConsolesBulk(@RequestBody List<Console> consoles) {
-        return consoleService.createConsolesBulk(consoles);
+        return consoles.stream()
+                .filter(c -> c.getName() != null && !c.getName().isEmpty())
+                .filter(c -> c.getType() != null && !c.getType().isEmpty())
+                .map(c -> {
+                    Console newConsole = new Console();
+                    newConsole.setName(c.getName());
+                    newConsole.setType(c.getType());
+                    return consoleService.createConsole(newConsole);
+                })
+                .toList();
     }
 
     @Operation(summary = "Delete a console", description = "Deletes a console by its ID")

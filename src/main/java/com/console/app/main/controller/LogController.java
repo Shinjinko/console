@@ -1,15 +1,9 @@
 package com.console.app.main.controller;
 
+import com.console.app.main.model.LogTask;
+import com.console.app.main.service.LogTaskService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.constraints.NotNull;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.time.LocalDate;
-import java.util.List;
-import java.util.stream.Collectors;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -17,49 +11,59 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.io.IOException;
+import java.nio.file.Path;
+import java.time.LocalDate;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/logs")
 public class LogController {
-    @Value("${logging.file.name}")
-    private String logFilePath;
 
-    @Operation(summary = "Get logs by date",
-            description = "Retrieves and saves logs filtered by a specific date")
-    @GetMapping("/by-date")
-    public ResponseEntity<Resource> getLogsByDate(
+    private final LogTaskService logTaskService;
+
+    public LogController(LogTaskService logTaskService) {
+        this.logTaskService = logTaskService;
+    }
+
+    @Operation(summary = "Create log file asynchronously",
+            description = "Initiates log file creation for a specific date and returns task ID")
+    @PostMapping("/create")
+    public ResponseEntity<UUID> createLogFileAsync(
             @RequestParam @NotNull(message = "Date is required")
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) throws IOException {
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        LogTask task = logTaskService.createLogTask(date);
+        logTaskService.createLogFileAsync(task.getId(), date);
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(task.getId());
+    }
 
-        List<String> filteredLogs = Files.readAllLines(Paths.get(logFilePath))
-                .stream()
-                .filter(line -> line.contains(date.toString()))
-                .collect(Collectors.toList());
+    @Operation(summary = "Get log task status",
+            description = "Retrieves the status of a log creation task by its ID")
+    @GetMapping("/status/{taskId}")
+    public ResponseEntity<LogTask> getLogTaskStatus(@PathVariable UUID taskId) {
+        LogTask task = logTaskService.getTaskStatus(taskId);
+        return ResponseEntity.ok(task);
+    }
 
-        if (filteredLogs.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+    @Operation(summary = "Get log file",
+            description = "Downloads the log file for a completed task by its ID")
+    @GetMapping("/file/{taskId}")
+    public ResponseEntity<Resource> getLogFile(@PathVariable UUID taskId) throws IOException {
+        try {
+            Path filePath = logTaskService.getLogFilePath(taskId);
+            Resource resource = new UrlResource(filePath.toUri());
+            if (!resource.exists()) {
+                throw new IllegalStateException("Log file not found for task: " + taskId);
+            }
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=\"" + resource.getFilename() + "\"")
+                    .body(resource);
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            throw new RuntimeException("Failed to retrieve log file: " + e.getMessage());
         }
-
-        Path dailyLogsDir = Paths.get("daily-logs");
-        if (!Files.exists(dailyLogsDir)) {
-            Files.createDirectory(dailyLogsDir);
-        }
-
-        String dailyLogFileName = "logs-" + date + ".log";
-        Path dailyLogPath = dailyLogsDir.resolve(dailyLogFileName);
-
-        Files.write(dailyLogPath, filteredLogs);
-
-        Resource resource = new UrlResource(dailyLogPath.toUri());
-
-        return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"" + resource.getFilename() + "\"")
-                .body(resource);
     }
 }

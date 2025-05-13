@@ -75,4 +75,10 @@ public class GlobalExceptionHandler {
     public ResponseEntity<String> handleExecutionNotFoundException(ExecutionNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
     }
+
+    @ExceptionHandler(LogFileNotReadyException.class)
+    @ResponseStatus(HttpStatus.TOO_EARLY)
+    public String handleLogFileNotReady(LogFileNotReadyException ex) {
+        return ex.getMessage();
+    }
 }

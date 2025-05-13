@@ -5,6 +5,7 @@ import com.console.app.main.exceptions.ExecutionNotFoundException;
 import com.console.app.main.model.Console;
 import com.console.app.main.model.ExecutionResult;
 import com.console.app.main.repository.ExecutionResultRepository;
+import java.time.format.DateTimeParseException;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -221,4 +222,198 @@ class ExecutionResultServiceTest {
         assertNotNull(result.getTime());
         verify(cache, times(1)).put(result);
     }
+
+    @Test
+    void patchExecution_ShouldHandleTimeAsString() {
+        // Arrange
+        ExecutionResult existing = new ExecutionResult("java", "code", "old", new Console());
+        existing.setExecutionId(1L);
+        String timeString = "2023-01-01T12:00:00";
+
+        when(repository.findById(1L)).thenReturn(Optional.of(existing));
+        when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        ExecutionResult result = executionResultService.patchExecution(1L,
+                Map.of("time", timeString));
+
+        // Assert
+        // The time will be updated to now, so we can't assert the specific time
+        assertNotNull(result.getTime());
+        // Verify other fields if needed
+    }
+
+    @Test
+    void patchExecution_ShouldHandleUnknownField() {
+        // Arrange
+        ExecutionResult existing = new ExecutionResult("java", "code", "old", new Console());
+        existing.setExecutionId(1L);
+
+        when(repository.findById(1L)).thenReturn(Optional.of(existing));
+        when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        ExecutionResult result = executionResultService.patchExecution(1L,
+                Map.of("unknownField", "value"));
+
+        // Assert
+        // The warning will be logged internally, but we can't verify it directly
+        assertNotNull(result); // Just verify it didn't throw an exception
+    }
+
+    @Test
+    void updateExecution_ShouldHandleNullTime() {
+        // Arrange
+        ExecutionResult existing = new ExecutionResult("old", "old", "old", new Console());
+        existing.setExecutionId(1L);
+        existing.setTime(LocalDateTime.now());
+
+        ExecutionResult updates = new ExecutionResult("new", "new", "new", new Console());
+        updates.setTime(null);
+
+        when(repository.findById(1L)).thenReturn(Optional.of(existing));
+        when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        ExecutionResult result = executionResultService.updateExecution(1L, updates);
+
+        // Assert
+        assertNotNull(result.getTime()); // Should not be null even when updates has null time
+    }
+
+    @Test
+    void init_ShouldRegisterCacheListener() {
+        // Arrange
+        ExecutionResultService service = new ExecutionResultService(repository, consoleService, cache);
+
+        // Act
+        service.init();
+
+        // Assert
+        verify(cache, times(1)).registerEvictionListener(any());
+    }
+
+    @Test
+    void patchExecution_ShouldParseStringTime() {
+        // This test is essentially the same as the above one now
+        // We can remove it or keep it as a different scenario
+        // Arrange
+        ExecutionResult existing = new ExecutionResult("java", "code", "old", new Console());
+        existing.setExecutionId(1L);
+        String timeString = "2023-01-01T12:00:00";
+
+        when(repository.findById(1L)).thenReturn(Optional.of(existing));
+        when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        ExecutionResult result = executionResultService.patchExecution(1L,
+                Map.of("time", timeString));
+
+        // Assert
+        assertNotNull(result.getTime());
+    }
+
+    @Test
+    void patchExecution_ShouldUseLocalDateTimeDirectly() {
+        // Arrange
+        ExecutionResult existing = new ExecutionResult("java", "code", "old", new Console());
+        existing.setExecutionId(1L);
+        LocalDateTime testTime = LocalDateTime.now();
+
+        when(repository.findById(1L)).thenReturn(Optional.of(existing));
+        when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        ExecutionResult result = executionResultService.patchExecution(1L,
+                Map.of("time", testTime));
+
+        // Assert
+        assertNotNull(result.getTime());
+        // Can't assert exact time because it will be overwritten
+    }
+
+    @Test
+    void updateExecutionFields_ShouldNotUpdateConsole_WhenSourceConsoleIsNull() {
+        // Arrange
+        ExecutionResult target = new ExecutionResult("java", "code", "success", new Console());
+        target.setConsole(new Console());
+        ExecutionResult source = new ExecutionResult("python", "newCode", "error", null);
+
+        // Act
+        executionResultService.updateExecutionFields(target, source);
+
+        // Assert
+        assertNotNull(target.getConsole()); // Console should remain unchanged
+        assertEquals("python", target.getLanguage());
+        assertEquals("newCode", target.getCode());
+        assertEquals("error", target.getResult());
+    }
+
+    @Test
+    void patchExecution_ShouldUpdateConsole_WhenConsoleIdProvided() {
+        // Arrange
+        Console newConsole = new Console();
+        newConsole.setId(2L);
+        ExecutionResult existing = new ExecutionResult("java", "code", "old", new Console());
+        existing.setExecutionId(1L);
+
+        when(consoleService.getConsoleById(2L)).thenReturn(newConsole);
+        when(repository.findById(1L)).thenReturn(Optional.of(existing));
+        when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        ExecutionResult result = executionResultService.patchExecution(1L,
+                Map.of("consoleId", "2"));
+
+        // Assert
+        assertEquals(newConsole, result.getConsole());
+        verify(consoleService, times(1)).getConsoleById(2L);
+    }
+
+    @Test
+    void patchExecution_ShouldHandleInvalidTimeString() {
+        // Arrange
+        ExecutionResult existing = new ExecutionResult("java", "code", "old", new Console());
+        existing.setExecutionId(1L);
+        String invalidTimeString = "invalid-time-format";
+
+        when(repository.findById(1L)).thenReturn(Optional.of(existing));
+        // Removed the save stub since we expect an exception
+
+        // Act & Assert
+        assertThrows(DateTimeParseException.class, () ->
+                executionResultService.patchExecution(1L, Map.of("time", invalidTimeString))
+        );
+    }
+
+    @Test
+    void updateExecution_ShouldHandleNullSource() {
+        // Arrange
+        ExecutionResult existing = new ExecutionResult("java", "code", "success", new Console());
+        existing.setExecutionId(1L);
+
+        when(repository.findById(1L)).thenReturn(Optional.of(existing));
+        // Removed the unnecessary save stub
+
+        // Act & Assert
+        assertThrows(NullPointerException.class, () ->
+                executionResultService.updateExecution(1L, null)
+        );
+    }
+
+    @Test
+    void patchExecution_ShouldHandleNullUpdates() {
+        // Arrange
+        ExecutionResult existing = new ExecutionResult("java", "code", "success", new Console());
+        existing.setExecutionId(1L);
+
+        when(repository.findById(1L)).thenReturn(Optional.of(existing));
+        // Removed the unnecessary save stub
+
+        // Act & Assert
+        assertThrows(NullPointerException.class, () ->
+                executionResultService.patchExecution(1L, null)
+        );
+    }
 }
+

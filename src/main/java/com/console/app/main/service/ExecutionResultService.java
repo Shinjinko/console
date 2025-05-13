@@ -131,7 +131,7 @@ public class ExecutionResultService {
     }
 
     // Вспомогательные методы
-    private void updateExecutionFields(ExecutionResult target, ExecutionResult source) {
+    void updateExecutionFields(ExecutionResult target, ExecutionResult source) {
         target.setLanguage(source.getLanguage());
         target.setCode(source.getCode());
         target.setResult(source.getResult());

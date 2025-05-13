@@ -98,6 +98,13 @@ public class UserController {
         return userService.getAllUsers();
     }
 
+    @Operation(summary = "Bulk create users", description = "Creates multiple users at once")
+    @PostMapping("/bulk")
+    @ResponseStatus(HttpStatus.CREATED)
+    public List<User> createUsersBulk(@RequestBody List<Map<String, String>> userMaps) {
+        return userService.createUsersBulk(userMaps);
+    }
+
     @Operation(summary = "Get user by ID",
             description = "Retrieves a single user by their unique ID")
     @ApiResponses(value = {

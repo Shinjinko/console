@@ -223,4 +223,56 @@ class ConsoleServiceTest {
         // Assert
         verify(consoleRepository, times(1)).deleteById(1L);
     }
+
+    @Test
+    void createConsolesBulk_ShouldIgnoreInvalidConsoles_AllCases() {
+        // Arrange
+        Console validConsole = new Console();
+        validConsole.setName("Valid");
+        validConsole.setType("Type");
+
+        Console nullNameConsole = new Console();
+        nullNameConsole.setType("Type");
+
+        Console emptyNameConsole = new Console();
+        emptyNameConsole.setName("");
+        emptyNameConsole.setType("Type");
+
+        Console nullTypeConsole = new Console();
+        nullTypeConsole.setName("Name");
+
+        Console emptyTypeConsole = new Console();
+        emptyTypeConsole.setName("Name");
+        emptyTypeConsole.setType("");
+
+        when(consoleRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        List<Console> result = consoleService.createConsolesBulk(
+                List.of(validConsole, nullNameConsole, emptyNameConsole, nullTypeConsole, emptyTypeConsole));
+
+        // Assert
+        assertEquals(1, result.size());
+        assertEquals("Valid", result.getFirst().getName());
+        verify(consoleRepository, times(1)).save(any());
+    }
+
+    @Test
+    void executeCode_ShouldReturnAllPossibleStatusMessages() {
+
+        Console console = new Console();
+        console.setId(1L);
+
+        when(consoleRepository.findById(1L)).thenReturn(Optional.of(console));
+        when(executionResultRepository.save(any(ExecutionResult.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        for (int i = 0; i < 100; i++) {
+            ExecutionResult result = consoleService.executeCode("java", "System.out.println(\"Hello\");", 1L);
+            assertTrue(Arrays.asList(ConsoleService.STATUS_MESSAGES).contains(result.getResult()));
+        }
+
+        verify(executionResultRepository, atLeastOnce()).save(any(ExecutionResult.class));
+    }
+
+
 }

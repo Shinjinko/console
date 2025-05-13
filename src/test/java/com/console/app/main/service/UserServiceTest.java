@@ -265,4 +265,129 @@ class UserServiceTest {
         // Assert
         assertNull(result);
     }
+
+    @Test
+    void createUser_ShouldThrowException_WhenEmailExists() {
+        // Arrange
+        when(userRepository.save(any())).thenThrow(
+                new DataIntegrityViolationException("users_email_key"));
+
+        // Act & Assert
+        ValidationException exception = assertThrows(ValidationException.class,
+                () -> userService.createUser("test", "test@example.com", "password"));
+
+        assertEquals("User with this email already exists", exception.getMessage());
+    }
+
+    @Test
+    void createUser_ShouldThrowGenericException_WhenUnknownConstraintViolation() {
+        // Arrange
+        when(userRepository.save(any())).thenThrow(
+                new DataIntegrityViolationException("unknown_constraint"));
+
+        // Act & Assert
+        ValidationException exception = assertThrows(ValidationException.class,
+                () -> userService.createUser("test", "test@example.com", "password"));
+
+        assertTrue(exception.getMessage().startsWith("Database error:"));
+    }
+
+    @Test
+    void patchUser_ShouldUpdatePassword() {
+        // Arrange
+        User user = new User();
+        user.setId(1);
+        user.setPassword("oldPassword");
+
+        when(userRepository.findById(1)).thenReturn(Optional.of(user));
+        when(userRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        Optional<User> result = userService.patchUser(1,
+                Map.of("password", "newPassword"));
+
+        // Assert
+        assertTrue(result.isPresent());
+        assertEquals("newPassword", result.get().getPassword());
+    }
+
+    @Test
+    void patchUser_ShouldThrowException_ForUnknownField() {
+
+        User user = new User();
+        user.setId(1);
+
+        when(userRepository.findById(1)).thenReturn(Optional.of(user));
+
+        assertThrows(RuntimeException.class, () ->
+                userService.patchUser(1, Map.of("invalidField", "value")));
+    }
+
+    @Test
+    void createUsersBulk_ShouldCreateUsersFromValidMaps() {
+
+        List<Map<String, String>> userMaps = List.of(
+                Map.of("name", "user1", "email", "user1@test.com", "password", "pass1"),
+                Map.of("name", "user2", "email", "user2@test.com", "password", "pass2")
+        );
+
+        User user1 = new User();
+        user1.setName("user1");
+        user1.setEmail("user1@test.com");
+        user1.setPassword("pass1");
+
+        User user2 = new User();
+        user2.setName("user2");
+        user2.setEmail("user2@test.com");
+        user2.setPassword("pass2");
+
+        when(userRepository.save(any(User.class)))
+                .thenReturn(user1)
+                .thenReturn(user2);
+
+        List<User> result = userService.createUsersBulk(userMaps);
+
+        assertEquals(2, result.size());
+        assertEquals("user1", result.get(0).getName());
+        assertEquals("user2", result.get(1).getName());
+        verify(userRepository, times(2)).save(any(User.class));
+    }
+
+    @Test
+    void createUsersBulk_ShouldFilterInvalidMaps() {
+        // Arrange
+        List<Map<String, String>> userMaps = List.of(
+                Map.of("name", "user1"),
+                Map.of("email", "user2@test.com", "password", "pass2"),
+                Map.of("name", "user3", "email", "user3@test.com", "password", "pass3")
+        );
+
+        User user3 = new User();
+        user3.setName("user3");
+        user3.setEmail("user3@test.com");
+        user3.setPassword("pass3");
+
+        when(userRepository.save(any(User.class))).thenReturn(user3);
+
+        // Act
+        List<User> result = userService.createUsersBulk(userMaps);
+
+        // Assert
+        assertEquals(1, result.size());
+        assertEquals("user3", result.getFirst().getName());
+        verify(userRepository, times(1)).save(any(User.class));
+    }
+
+    @Test
+    void createUsersBulk_ShouldHandleEmptyList() {
+        // Arrange
+        List<Map<String, String>> userMaps = List.of();
+
+        // Act
+        List<User> result = userService.createUsersBulk(userMaps);
+
+        // Assert
+        assertTrue(result.isEmpty());
+        verify(userRepository, never()).save(any());
+    }
 }

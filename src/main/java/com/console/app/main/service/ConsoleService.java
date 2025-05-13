@@ -14,7 +14,7 @@ public class ConsoleService {
     private final ConsoleRepository consoleRepository;
     private final ExecutionResultRepository executionResultRepository; // Добавляем зависимость
 
-    private static final String[] STATUS_MESSAGES = {
+    static final String[] STATUS_MESSAGES = {
         "Выполнено успешно",
         "Ошибка компилятора",
         "Ошибка линковки",
@@ -66,7 +66,6 @@ public class ConsoleService {
     }
 
 
-    // Исполнение кода с привязкой к консоли
     public ExecutionResult executeCode(String language, String code, Long consoleId) {
         int randomIndex = ThreadLocalRandom.current().nextInt(STATUS_MESSAGES.length);
         String message = STATUS_MESSAGES[randomIndex];
@@ -74,6 +73,6 @@ public class ConsoleService {
         Console console = getConsoleById(consoleId);
         ExecutionResult result = new ExecutionResult(language, code, message, console);
 
-        return executionResultRepository.save(result); // Должен возвращать сохранённый объект
+        return executionResultRepository.save(result);
     }
 }

@@ -9,6 +9,7 @@ import com.console.app.main.repository.UserRepository;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,6 +53,21 @@ public class UserService {
         }
     }
 
+    public List<User> createUsersBulk(List<Map<String, String>> userMaps) {
+        return userMaps.stream()
+                .filter(map ->
+                        map.containsKey("name")
+                                && map.containsKey("email") && map.containsKey("password"))
+                .map(map -> {
+                    User user = new User();
+                    user.setName(map.get("name"));
+                    user.setEmail(map.get("email"));
+                    user.setPassword(map.get("password"));
+                    return userRepository.save(user);
+                })
+                .collect(Collectors.toList());
+    }
+
     @Transactional
     public void addConsoleToUser(Long userId, Long consoleId) {
         User user = userRepository.findById(Math.toIntExact(userId))
@@ -60,8 +76,8 @@ public class UserService {
         Console console = consoleRepository.findById(consoleId)
                 .orElseThrow(() -> new RuntimeException("Console not found with id: " + consoleId));
 
-        user.getConsoles().add(console); // Добавляем консоль в список пользователя
-        userRepository.save(user); // Hibernate автоматически обновит `user_consoles`
+        user.getConsoles().add(console);
+        userRepository.save(user);
 
     }
 

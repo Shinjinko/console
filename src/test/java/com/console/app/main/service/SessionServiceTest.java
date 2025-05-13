@@ -277,4 +277,83 @@ class SessionServiceTest {
         assertNotNull(result);
         assertEquals(consoleRepository, result); // Verify it returns the mocked instance
     }
+
+    @Test
+    void createSession_ShouldThrowException_WhenUserNotFound() {
+        // Arrange
+        when(userRepository.findById(anyInt())).thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThrows(IllegalArgumentException.class,
+                () -> sessionService.createSession("ACTIVE", 999L));
+        verify(sessionRepository, never()).save(any());
+    }
+
+    @Test
+    void updateSession_ShouldThrowException_WhenUserNotFound() {
+        // Arrange
+        User invalidUser = new User();
+        invalidUser.setId(999);
+
+        Session updates = new Session();
+        updates.setUser(invalidUser);
+
+        Session existing = new Session();
+        existing.setId(1L);
+
+        when(sessionRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(userRepository.existsById(999)).thenReturn(false);
+
+        // Act & Assert
+        assertThrows(IllegalArgumentException.class,
+                () -> sessionService.updateSession(1L, updates));
+        verify(sessionRepository, never()).save(any());
+    }
+
+    @Test
+    void updateSessionStatus_ShouldUpdateStatusWithoutEndTime_WhenNotFinishedOrError() {
+        // Arrange
+        Session session = new Session();
+        session.setId(1L);
+
+        when(sessionRepository.findById(1L)).thenReturn(Optional.of(session));
+        when(sessionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        Session updated = sessionService.updateSessionStatus(1L, "PAUSED");
+
+        // Assert
+        assertEquals("PAUSED", updated.getStatus());
+        assertNull(updated.getEndTime());
+        verify(sessionRepository, times(1)).save(session);
+    }
+
+    @Test
+    void updateSessionStatus_ShouldUpdateStatusWithEndTime_WhenError() {
+        // Arrange
+        Session session = new Session();
+        session.setId(1L);
+
+        when(sessionRepository.findById(1L)).thenReturn(Optional.of(session));
+        when(sessionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        Session updated = sessionService.updateSessionStatus(1L, "ERROR");
+
+        // Assert
+        assertEquals("ERROR", updated.getStatus());
+        assertNotNull(updated.getEndTime());
+        verify(sessionRepository, times(1)).save(session);
+    }
+
+    @Test
+    void updateSession_ShouldThrowException_WhenSessionNotFound() {
+        // Arrange
+        when(sessionRepository.findById(1L)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThrows(SessionNotFoundException.class,
+                () -> sessionService.updateSession(1L, new Session()));
+        verify(sessionRepository, never()).save(any());
+    }
 }

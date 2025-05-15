@@ -12,7 +12,9 @@ import org.springframework.stereotype.Service;
 @Service
 public class ConsoleService {
     private final ConsoleRepository consoleRepository;
-    private final ExecutionResultRepository executionResultRepository; // Добавляем зависимость
+    private final ExecutionResultRepository executionResultRepository;
+    private final HistoryService historyService;
+
 
     static final String[] STATUS_MESSAGES = {
         "Выполнено успешно",
@@ -23,9 +25,11 @@ public class ConsoleService {
 
     // Конструктор с двумя зависимостями
     public ConsoleService(ConsoleRepository consoleRepository,
-                          ExecutionResultRepository executionResultRepository) {
+                          ExecutionResultRepository executionResultRepository,
+                          HistoryService historyService) {
         this.consoleRepository = consoleRepository;
         this.executionResultRepository = executionResultRepository;
+        this.historyService = historyService;
     }
 
     // Методы работы с консолью
@@ -39,7 +43,10 @@ public class ConsoleService {
     }
 
     public Console createConsole(Console console) {
-        return consoleRepository.save(console);
+        Console saved = consoleRepository.save(console);
+        historyService.logAction("Создана консоль: " + saved.getName());
+        return saved;
+
     }
 
     public Console updateConsole(Long id, Console console) {

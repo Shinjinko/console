@@ -4,7 +4,9 @@ import com.console.app.main.exceptions.UserNotFoundExceptions;
 import com.console.app.main.exceptions.ValidationException;
 import com.console.app.main.model.ExecutionResult;
 import com.console.app.main.model.User;
+import com.console.app.main.repository.UserRepository;
 import com.console.app.main.service.UserService;
+import com.console.app.main.service.VisitCounterService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -17,6 +19,9 @@ import java.util.List;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -28,16 +33,56 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
 
     private final UserService userService;
+    private final VisitCounterService visitCounterService;
+    private final PasswordEncoder passwordEncoder;
+    private final UserRepository userRepository;
 
-    public UserController(UserService userService) {
+    @GetMapping("/me")
+    public ResponseEntity<Map<String, Object>> getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(401).build();
+        }
+
+        // Получаем email из аутентификации
+        String email = authentication.getName();
+
+        // Загружаем пользователя из БД
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        return ResponseEntity.ok(Map.of(
+                "id", user.getId(),
+                "name", user.getName(),
+                "email", user.getEmail()
+        ));
+    }
+
+    public UserController(UserService userService, VisitCounterService visitCounterService,
+                          PasswordEncoder passwordEncoder, UserRepository userRepository) {
         this.userService = userService;
+        this.visitCounterService = visitCounterService;
+        this.passwordEncoder = passwordEncoder;
+        this.userRepository = userRepository;
+    }
+
+    @Operation(summary = "Get all users",
+            description = "Retrieves a list of all users in the system")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Successfully retrieved list"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @GetMapping
+    public List<User> getAllUsers() {
+        visitCounterService.incrementUserVisits(); // Увеличиваем счётчик
+        return userService.getAllUsers();
     }
 
     @Operation(summary = "Create new user", description = "Creates a new user account")
@@ -48,29 +93,16 @@ public class UserController {
     })
     @PostMapping("/create")
     public ResponseEntity<?> createUser(
-            @Parameter(description = "User name (must not be blank)", required = true)
-            @Valid @RequestParam @NotBlank(message = "Name cannot be blank")
-            String name,
-
-            @Parameter(description = "User email (must be valid)", required = true)
-            @Valid @RequestParam
-            @Email(message = "Email should be valid")
-            String email,
-
-            @Parameter(description = "User password (min 6 characters)", required = true)
-            @Valid @RequestParam
-            @Size(min = 6, message = "Password must be at least 6 characters")
-            String password) {
+            @RequestParam @NotBlank(message = "Name cannot be blank") String name,
+            @RequestParam @Email(message = "Email should be valid") String email,
+            @RequestParam @Size(min = 6, message = "Password must be at least 6 characters") String password) {
 
         try {
-            User user = userService.createUser(name, password, email);
+            User user = userService.createUser(name, email, passwordEncoder.encode(password));
             return ResponseEntity.status(HttpStatus.CREATED).body(user);
         } catch (ValidationException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().body("Internal server error");
         }
-
     }
 
     @Operation(summary = "Add console to user",
@@ -85,17 +117,6 @@ public class UserController {
                                                    @PathVariable Long consoleId) {
         userService.addConsoleToUser(userId, consoleId);
         return ResponseEntity.ok("Console added to user successfully");
-    }
-
-    @Operation(summary = "Get all users",
-            description = "Retrieves a list of all users in the system")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Successfully retrieved list"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
-    @GetMapping
-    public List<User> getAllUsers() {
-        return userService.getAllUsers();
     }
 
     @Operation(summary = "Bulk create users", description = "Creates multiple users at once")

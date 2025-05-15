@@ -14,20 +14,30 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import java.util.HashSet;
 import java.util.Set;
+import lombok.Getter;
+import lombok.Setter;
 
 @Entity
 @Table(name = "consoles")
 public class Console {
+    @Setter
+    @Getter
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Setter
+    @Getter
     @Column(name = "name", nullable = false)
     private String name;
 
+    @Setter
+    @Getter
     @Column(name = "type", nullable = false)
     private String type; // WEB_TERMINAL, LOCAL_IDE
 
+    @Setter
+    @Getter
     @ManyToMany(mappedBy = "consoles", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonBackReference
     private Set<User> users = new HashSet<>();
@@ -37,37 +47,4 @@ public class Console {
     private Set<ExecutionResult> executionResults = new HashSet<>();
 
     public Console() {}
-
-    // Геттеры и сеттеры
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getType() {
-        return type;
-    }
-
-    public void setType(String type) {
-        this.type = type;
-    }
-
-    public Set<User> getUsers() {
-        return users;
-    }
-
-    public void setUsers(Set<User> users) {
-        this.users = users;
-    }
 }

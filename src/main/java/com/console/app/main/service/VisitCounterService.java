@@ -5,17 +5,14 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class VisitCounterService {
-    private final AtomicLong counter = new AtomicLong(0);
+    private final AtomicLong userVisits = new AtomicLong(0);
 
-    public synchronized long increment() {
-        return counter.incrementAndGet();
+    public synchronized void incrementUserVisits() {
+        userVisits.incrementAndGet();
     }
 
-    public long getCount() {
-        return counter.get();
+    public long getUserVisitsCount() {
+        return userVisits.get();
     }
 
-    public synchronized void reset() {
-        counter.set(0);
-    }
 }

@@ -4,6 +4,8 @@ import com.console.app.main.model.HistoryItem;
 import com.console.app.main.model.User;
 import com.console.app.main.repository.HistoryItemRepository;
 import com.console.app.main.repository.UserRepository;
+import jakarta.transaction.Transactional;
+import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -25,19 +27,18 @@ public class HistoryService {
         return historyItemRepository.findByUserEmailOrderByCreatedAtDesc(email);
     }
 
-    public HistoryItem logAction(String description) {
-        // Получаем email из контекста безопасности
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String email = authentication.getName();
-
-        // Ищем пользователя по email
-        User user = userRepository.findByEmail(email)
+    @Transactional
+    public void logAction(Long userId, String description) {
+        User user = userRepository.findById(Math.toIntExact(userId))
                 .orElseThrow(() -> new RuntimeException("User not found"));
+        HistoryItem historyItem = new HistoryItem();
+        historyItem.setUser(user);
+        historyItem.setDescription(description);
+        historyItem.setCreatedAt(LocalDateTime.now());
+        historyItemRepository.save(historyItem);
+    }
 
-        HistoryItem item = new HistoryItem();
-        item.setDescription(description);
-        item.setUser(user);
-
-        return historyItemRepository.save(item);
+    public List<HistoryItem> getHistoryByUserId(Long userId) {
+        return historyItemRepository.findByUser_IdOrderByCreatedAtDesc(userId);
     }
 }

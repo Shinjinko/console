@@ -83,21 +83,12 @@ public class UserService {
 
     @Transactional
     public void removeConsoleFromUser(Long userId, Long consoleId) {
-        // Находим пользователя по ID
         User user = userRepository.findById(Math.toIntExact(userId))
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
-
-        // Находим консоль по ID
+                .orElseThrow(() -> new RuntimeException("User not found"));
         Console console = consoleRepository.findById(consoleId)
-                .orElseThrow(() -> new RuntimeException("Console not found with id: " + consoleId));
-
-        // Удаляем консоль из коллекции пользователя
+                .orElseThrow(() -> new RuntimeException("Console not found"));
         user.getConsoles().remove(console);
-
-        // Удаляем пользователя из коллекции консоли (для двунаправленной связи)
         console.getUsers().remove(user);
-
-        // Сохраняем изменения (необязательно, если используется транзакция)
         userRepository.save(user);
         consoleRepository.save(console);
     }
@@ -114,6 +105,12 @@ public class UserService {
             });
             return userRepository.save(user);
         });
+    }
+
+    public Long getUserIdByEmail(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        return (long) user.getId();
     }
 
     public void deleteUser(int id) {

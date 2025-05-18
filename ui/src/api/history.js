@@ -7,7 +7,7 @@ export const getActivityHistory = async () => {
     return response.data.map(item => ({
         id: item.id,
         action: item.description,
-        timestamp: new Date(item.createdAt).toLocaleString()
+        timestamp: item.createdAt ? new Date(item.createdAt).toLocaleString() : 'N/A'
     }));
 };
 

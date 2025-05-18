@@ -4,8 +4,9 @@ import com.console.app.main.model.Console;
 import com.console.app.main.model.ExecutionResult;
 import com.console.app.main.repository.ConsoleRepository;
 import com.console.app.main.repository.ExecutionResultRepository;
-import java.time.LocalDateTime;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 import org.springframework.stereotype.Service;
 
@@ -42,9 +43,14 @@ public class ConsoleService {
                 .orElseThrow(() -> new RuntimeException("Console not found"));
     }
 
+    @Transactional(readOnly = true)
+    public Optional<Console> getconsolebyiD(Long id) {
+        return consoleRepository.findById(id);
+    }
+
     public Console createConsole(Console console) {
         Console saved = consoleRepository.save(console);
-        historyService.logAction("Создана консоль: " + saved.getName());
+        historyService.logAction(console.getId(), "Создана консоль: " + saved.getName());
         return saved;
 
     }
@@ -81,5 +87,10 @@ public class ConsoleService {
         ExecutionResult result = new ExecutionResult(language, code, message, console);
 
         return executionResultRepository.save(result);
+    }
+
+    @Transactional
+    public Console save(Console console) {
+        return consoleRepository.save(console);
     }
 }

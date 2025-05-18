@@ -1,18 +1,20 @@
 import { Form, Input, Button, Card, message } from 'antd';
 import { LockOutlined, MailOutlined } from '@ant-design/icons';
-import { login } from '../api/auth';
-import { Link } from 'react-router-dom';
-import axios from "axios";
+import {getCurrentUser, login} from '../api/auth';
+import { Link, useNavigate } from 'react-router-dom';
+import {AuthContext} from "../AuthContext";
+import {useContext} from "react";
 
 export default function LoginPage() {
+    const { setUser } = useContext(AuthContext);
+    const navigate = useNavigate();
+
     const onFinish = async (values) => {
         try {
             await login(values.email, values.password);
-            // Логирование успешного входа
-            await axios.post('/api/history', {
-                description: `Пользователь ${values.email} вошел в систему`
-            }, { withCredentials: true });
-            window.location.href = '/';
+            const userData = await getCurrentUser();
+            setUser(userData); // Обновляем состояние
+            navigate('/');
         } catch (error) {
             message.error('Ошибка входа: ' + error.message);
         }
@@ -35,7 +37,7 @@ export default function LoginPage() {
                     </Button>
                 </Form.Item>
 
-                <Link to="/register">Нет аккаунта? Зарегистрируйтесь</Link>
+                <Link to="/register">Нет аккаунта? Зарегистрироваться</Link>
             </Form>
         </Card>
     );

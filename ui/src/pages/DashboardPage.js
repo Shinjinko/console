@@ -7,6 +7,7 @@ export default function DashboardPage() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+
         const fetchHistory = async () => {
             try {
                 const data = await getActivityHistory();

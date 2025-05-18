@@ -31,7 +31,7 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-//                        .requestMatchers("/api/auth/**", "/api/users/create").permitAll()
+                        .requestMatchers("/api/auth/**", "/api/users/create").permitAll()
                         .anyRequest().authenticated()
                 )
                 .formLogin(form -> form
@@ -57,9 +57,8 @@ public class SecurityConfig {
         final UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
 
-        // Настройки CORS
         config.setAllowCredentials(true);
-        config.addAllowedOrigin("http://localhost:3000"); // URL вашего фронтенда
+        config.addAllowedOrigin("http://localhost:3000");
         config.addAllowedHeader("*");
         config.addAllowedMethod("*");
 

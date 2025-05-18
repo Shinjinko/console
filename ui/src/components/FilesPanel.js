@@ -1,4 +1,4 @@
-import { Tree, Button } from 'antd';
+import {Tree, Button, Table} from 'antd';
 import { FolderOutlined, FileTextOutlined } from '@ant-design/icons';
 
 const FilesPanel = () => {
@@ -23,6 +23,7 @@ const FilesPanel = () => {
             ],
         },
     ];
+
 
     return (
         <div style={{ padding: '16px' }}>

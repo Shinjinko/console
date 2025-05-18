@@ -2,19 +2,19 @@ package com.console.app.main.controller;
 
 import com.console.app.main.exceptions.UserNotFoundExceptions;
 import com.console.app.main.exceptions.ValidationException;
+import com.console.app.main.model.Console;
 import com.console.app.main.model.ExecutionResult;
 import com.console.app.main.model.User;
 import com.console.app.main.repository.UserRepository;
 import com.console.app.main.service.UserService;
 import com.console.app.main.service.VisitCounterService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
@@ -22,6 +22,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -42,6 +43,8 @@ public class UserController {
     private final VisitCounterService visitCounterService;
     private final PasswordEncoder passwordEncoder;
     private final UserRepository userRepository;
+    private final HistoryController historyController;
+    private HistoryRequest historyRequest;
 
     @GetMapping("/me")
     public ResponseEntity<Map<String, Object>> getCurrentUser() {
@@ -66,11 +69,13 @@ public class UserController {
     }
 
     public UserController(UserService userService, VisitCounterService visitCounterService,
-                          PasswordEncoder passwordEncoder, UserRepository userRepository) {
+                          PasswordEncoder passwordEncoder, UserRepository userRepository,
+                          HistoryController historyController) {
         this.userService = userService;
         this.visitCounterService = visitCounterService;
         this.passwordEncoder = passwordEncoder;
         this.userRepository = userRepository;
+        this.historyController = historyController;
     }
 
     @Operation(summary = "Get all users",
@@ -95,7 +100,8 @@ public class UserController {
     public ResponseEntity<?> createUser(
             @RequestParam @NotBlank(message = "Name cannot be blank") String name,
             @RequestParam @Email(message = "Email should be valid") String email,
-            @RequestParam @Size(min = 6, message = "Password must be at least 6 characters") String password) {
+            @RequestParam @Size(min = 6, message = "Password must be at least 6 characters")
+            String password) {
 
         try {
             User user = userService.createUser(name, email, passwordEncoder.encode(password));
@@ -217,5 +223,71 @@ public class UserController {
     @GetMapping("/{id}/executions")
     public List<ExecutionResult> getUserExecutions(@PathVariable int id) {
         return userService.getUserExecutions(id);
+    }
+
+
+    @Operation(summary = "Get consoles for current user",
+            description = "Retrieves the list of consoles associated with the currently authenticated user")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Consoles retrieved successfully"),
+            @ApiResponse(responseCode = "404", description = "User not found"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @GetMapping("/me/consoles")
+    @Transactional(readOnly = true)
+    public List<Console> getConsolesForCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication.getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        return new ArrayList<>(user.getConsoles());
+    }
+
+    @Operation(summary = "Add console to current user",
+            description = "Associates a console with the currently authenticated user")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Console added successfully"),
+            @ApiResponse(responseCode = "404", description = "User or console not found"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @PostMapping("/me/consoles/{consoleId}")
+    @Transactional
+    public ResponseEntity<String> addConsoleToCurrentUser(@PathVariable Long consoleId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication.getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        userService.addConsoleToUser((long) user.getId(), consoleId);
+
+        HistoryRequest historyRequest = new HistoryRequest();
+        historyRequest.setUserId((long) user.getId());
+        historyRequest.setDescription("Добавил консоль ID " + consoleId + " к своему аккаунту");
+        historyController.logAction(historyRequest);
+
+        return ResponseEntity.ok("Console added to user successfully");
+    }
+
+    @Operation(summary = "Remove console from current user",
+            description = "Disassociates a console from the currently authenticated user")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Console removed successfully"),
+            @ApiResponse(responseCode = "404", description = "User or console not found"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @DeleteMapping("/me/consoles/{consoleId}")
+    @Transactional
+    public ResponseEntity<?> removeConsoleFromCurrentUser(@PathVariable Long consoleId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication.getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        userService.removeConsoleFromUser((long) user.getId(), consoleId);
+
+        HistoryRequest historyRequest = new HistoryRequest();
+        historyRequest.setUserId((long) user.getId());
+        historyRequest.setDescription("Удалил консоль ID " + consoleId + " из своего аккаунта");
+        historyController.logAction(historyRequest);
+
+        return ResponseEntity.noContent().build();
     }
 }

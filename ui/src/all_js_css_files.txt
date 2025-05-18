@@ -1,0 +1,664 @@
+﻿import axios from 'axios';
+import {logActivity} from "./history";
+
+export const login = async (email, password) => {
+    const response = await axios.post(
+        '/api/auth/login',
+        `email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`,
+        {
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            withCredentials: true
+        }
+    );
+
+    await logActivity(`РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ ${email} РІРѕС€РµР» РІ СЃРёСЃС‚РµРјСѓ`);
+    return response.data;
+};
+
+export const register = async (data) => {
+    const response = await axios.post('/api/users/create', data, {
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        withCredentials: true
+    });
+
+    await logActivity(`Р—Р°СЂРµРіРёСЃС‚СЂРёСЂРѕРІР°РЅ РЅРѕРІС‹Р№ РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ: ${data.email}`);
+    return response.data;
+};
+
+export const logout = async () => {
+    await axios.post('/api/auth/logout', {}, { withCredentials: true });
+};
+
+export const getCurrentUser = async () => {
+    const response = await axios.get('/api/users/me', { withCredentials: true });
+    return {
+        id: response.data.id,
+        name: response.data.name,
+        email: response.data.email
+    };
+};
+
+axios.defaults.withCredentials = true;
+import axios from 'axios';
+
+export const getActivityHistory = async () => {
+    const response = await axios.get('/api/history', {
+        withCredentials: true
+    });
+    return response.data.map(item => ({
+        id: item.id,
+        action: item.description,
+        timestamp: new Date(item.createdAt).toLocaleString()
+    }));
+};
+
+export const logActivity = async (action) => {
+    await axios.post('/api/history', {
+        description: action
+    }, {
+        withCredentials: true
+    });
+};
+import { useState } from 'react';
+import Editor from '@monaco-editor/react';
+import { Button, Select, Space, Alert } from 'antd';
+import { LoadingOutlined } from '@ant-design/icons';
+import {logActivity} from "../api/history";
+import axios from "axios";
+
+const languages = [
+    { value: 'python', label: 'Python' },
+    { value: 'javascript', label: 'JavaScript' },
+    { value: 'java', label: 'Java' },
+    { value: 'cpp', label: 'C++' },
+];
+
+const CodeEditor = () => {
+    const [code, setCode] = useState('# РќР°С‡РЅРёС‚Рµ РїРёСЃР°С‚СЊ РєРѕРґ Р·РґРµСЃСЊ\nprint("Hello World!")');
+    const [selectedLanguage, setLanguage] = useState('python');
+    const [output, setOutput] = useState('');
+    const [isRunning, setIsRunning] = useState(false);
+
+    const handleRunCode = async () => {
+        try {
+            const result = await executeCode(code, selectedLanguage);
+            await axios.post('/api/history', {
+                description: `Р’С‹РїРѕР»РЅРµРЅ РєРѕРґ РЅР° ${selectedLanguage}: ${result}`
+            }, { withCredentials: true });
+        } catch (error) {
+            await axios.post('/api/history', {
+                description: `РћС€РёР±РєР° РІС‹РїРѕР»РЅРµРЅРёСЏ РєРѕРґР°: ${error.message}`
+            }, { withCredentials: true });
+        }
+    };
+
+    return (
+        <div style={{ height: 'calc(100vh - 64px)' }}>
+            <Space style={{ padding: '10px', background: '#f0f2f5' }}>
+                <Select
+                    value={selectedLanguage}
+                    onChange={setLanguage}
+                    options={languages}
+                    style={{ width: 120 }}
+                />
+                <Button
+                    type="primary"
+                    onClick={handleRunCode}
+                    icon={isRunning ? <LoadingOutlined /> : null}
+                >
+                    Р’С‹РїРѕР»РЅРёС‚СЊ
+                </Button>
+            </Space>
+
+            <div style={{ display: 'flex', height: '100%' }}>
+                <Editor
+                    height="70vh"
+                    defaultLanguage={selectedLanguage}
+                    value={code}
+                    onChange={setCode}
+                    theme="vs-dark"
+                    options={{
+                        minimap: { enabled: false },
+                        fontSize: 14,
+                    }}
+                />
+
+                <div style={{
+                    width: '30%',
+                    padding: '16px',
+                    background: '#1e1e1e',
+                    color: '#fff',
+                    overflowY: 'auto'
+                }}>
+                    <h4>Р РµР·СѓР»СЊС‚Р°С‚ РІС‹РїРѕР»РЅРµРЅРёСЏ:</h4>
+                    <pre style={{ whiteSpace: 'pre-wrap' }}>{output || 'РќР°Р¶РјРёС‚Рµ "Р’С‹РїРѕР»РЅРёС‚СЊ" РґР»СЏ Р·Р°РїСѓСЃРєР° РєРѕРґР°'}</pre>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const executeCode = async (code, language) => {
+    return new Promise(resolve => {
+        setTimeout(() => {
+            resolve('Hello World!\nCode executed successfully!');
+        }, 1000);
+    });
+};
+
+export default CodeEditor;
+import { Tree, Button } from 'antd';
+import { FolderOutlined, FileTextOutlined } from '@ant-design/icons';
+
+const FilesPanel = () => {
+    const files = [
+        {
+            title: 'РњРѕРё РїСЂРѕРµРєС‚С‹',
+            key: '0',
+            children: [
+                {
+                    title: 'project1.py',
+                    key: '1',
+                    icon: <FileTextOutlined />
+                },
+                {
+                    title: 'web-app',
+                    key: '2',
+                    icon: <FolderOutlined />,
+                    children: [
+                        { title: 'index.js', key: '3', icon: <FileTextOutlined /> },
+                    ]
+                },
+            ],
+        },
+    ];
+
+    return (
+        <div style={{ padding: '16px' }}>
+            <Button type="primary" block style={{ marginBottom: '16px' }}>
+                РќРѕРІС‹Р№ С„Р°Р№Р»
+            </Button>
+            <Tree
+                showIcon
+                treeData={files}
+            />
+        </div>
+    );
+};
+
+export default FilesPanel;
+import { Layout, Menu, Button } from 'antd';
+import { UserOutlined, ConsoleSqlOutlined } from '@ant-design/icons';
+
+const { Header } = Layout;
+
+export default function AppHeader() {
+    return (
+        <Header style={{ background: '#fff', padding: 0 }}>
+            <div className="logo" style={{ float: 'left', margin: '0 24px' }}>
+                <h2>Console Management</h2>
+            </div>
+            <Menu mode="horizontal" style={{ float: 'right' }}>
+                <Menu.Item key="users" icon={<UserOutlined />}>
+                    User
+                </Menu.Item>
+                <Menu.Item key="consoles" icon={<ConsoleSqlOutlined />}>
+                    Consoles
+                </Menu.Item>
+            </Menu>
+        </Header>
+    );
+}
+import { Navigate } from 'react-router-dom';
+import { checkAuth } from '../utils/auth';
+import {Spin} from "antd";
+import {useEffect, useState} from "react";
+
+export default function PrivateRoute({ children }) {
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        checkAuth().then(auth => {
+            setIsAuthenticated(auth);
+            setLoading(false);
+        });
+    }, []);
+
+    if (loading) return <Spin fullscreen />;
+    return isAuthenticated ? children : <Navigate to="/login" />;
+}
+import React from 'react';
+import { Modal, Form, Input, message } from 'antd';
+
+const UserModal = ({ visible, user, onCancel, onSuccess }) => {
+    const [form] = Form.useForm();
+
+    const handleSubmit = async (values) => {
+        try {
+            if (user.id) {
+                await api.put(`/users/${user.id}`, values);
+                message.success('РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ РѕР±РЅРѕРІР»РµРЅ');
+            } else {
+                await api.post('/users/create', values);
+                message.success('РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ СЃРѕР·РґР°РЅ');
+            }
+            onSuccess();
+        } catch (error) {
+            message.error('РћС€РёР±РєР°: ' + (error.response?.data || error.message));
+        }
+    };
+
+    return (
+        <Modal
+            title={user.id ? 'Р РµРґР°РєС‚РёСЂРѕРІР°РЅРёРµ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ' : 'РЎРѕР·РґР°РЅРёРµ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ'}
+            visible={visible}
+            onOk={() => form.submit()}
+            onCancel={onCancel}
+            destroyOnClose
+        >
+            <Form
+                form={form}
+                layout="vertical"
+                initialValues={user}
+                onFinish={handleSubmit}
+            >
+                <Form.Item
+                    name="name"
+                    label="РРјСЏ"
+                    rules={[{ required: true, message: 'Р’РІРµРґРёС‚Рµ РёРјСЏ' }]}
+                >
+                    <Input />
+                </Form.Item>
+
+                <Form.Item
+                    name="email"
+                    label="Email"
+                    rules={[{ type: 'email', message: 'РќРµРєРѕСЂСЂРµРєС‚РЅС‹Р№ email' }]}
+                >
+                    <Input />
+                </Form.Item>
+
+                <Form.Item
+                    name="password"
+                    label="РџР°СЂРѕР»СЊ"
+                    rules={[{ required: !user.id, message: 'Р’РІРµРґРёС‚Рµ РїР°СЂРѕР»СЊ' }]}
+                >
+                    <Input.Password />
+                </Form.Item>
+            </Form>
+        </Modal>
+    );
+};
+
+export default UserModal;
+import { useEffect, useState } from 'react';
+import { Card, Descriptions, Button, Spin } from 'antd';
+import { getCurrentUser, logout } from '../api/auth';
+
+export default function AccountPage() {
+    const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchUser = async () => {
+            try {
+                const data = await getCurrentUser();
+                setUser(data);
+            } catch (error) {
+                console.error('РћС€РёР±РєР° Р·Р°РіСЂСѓР·РєРё РґР°РЅРЅС‹С…:', error);
+            }
+            setLoading(false);
+        };
+        fetchUser();
+    }, []);
+
+    const handleLogout = async () => {
+        await logout();
+        window.location.href = '/login';
+    };
+
+    return (
+        <Card title="РњРѕР№ Р°РєРєР°СѓРЅС‚" style={{ margin: 20 }}>
+            <Spin spinning={loading}>
+                {user && (
+                    <>
+                        <Descriptions bordered column={1}>
+                            <Descriptions.Item label="РРјСЏ">{user.name}</Descriptions.Item>
+                            <Descriptions.Item label="Email">{user.email}</Descriptions.Item>
+                        </Descriptions>
+                        <Button danger onClick={handleLogout} style={{ marginTop: 16 }}>
+                            Р’С‹Р№С‚Рё
+                        </Button>
+                    </>
+                )}
+            </Spin>
+        </Card>
+    );
+}
+import { useEffect, useState } from 'react';
+import { Table, Spin, Button } from 'antd';
+import axios from 'axios';
+
+export default function ConsolesPage() {
+    const [consoles, setConsoles] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        axios.get('/api/consoles', { withCredentials: true })
+            .then(res => setConsoles(res.data))
+            .finally(() => setLoading(false));
+    }, []);
+
+    const columns = [
+        { title: 'ID', dataIndex: 'id' },
+        { title: 'РќР°Р·РІР°РЅРёРµ', dataIndex: 'name' },
+        { title: 'РўРёРї', dataIndex: 'type' }
+    ];
+
+    return (
+        <Spin spinning={loading}>
+            <Table dataSource={consoles} columns={columns} rowKey="id" />
+        </Spin>
+    );
+}
+import { useEffect, useState } from 'react';
+import { List, Card, Spin } from 'antd';
+import { getActivityHistory } from '../api/history';
+
+export default function DashboardPage() {
+    const [history, setHistory] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchHistory = async () => {
+            try {
+                const data = await getActivityHistory();
+                setHistory(data);
+            } catch (error) {
+                console.error('РћС€РёР±РєР° Р·Р°РіСЂСѓР·РєРё РёСЃС‚РѕСЂРёРё:', error);
+            }
+            setLoading(false);
+        };
+        fetchHistory();
+    }, []);
+
+    return (
+        <Card title="РџРѕСЃР»РµРґРЅРёРµ РґРµР№СЃС‚РІРёСЏ" style={{ margin: 20 }}>
+            <Spin spinning={loading}>
+                <List
+                    dataSource={history}
+                    renderItem={(item) => (
+                        <List.Item>
+                            {item.timestamp}: {item.action}
+                        </List.Item>
+                    )}
+                />
+            </Spin>
+        </Card>
+    );
+}
+import { Form, Input, Button, Card, message } from 'antd';
+import { LockOutlined, MailOutlined } from '@ant-design/icons';
+import { login } from '../api/auth';
+import { Link } from 'react-router-dom';
+import axios from "axios";
+
+export default function LoginPage() {
+    const onFinish = async (values) => {
+        try {
+            await login(values.email, values.password);
+            // Р›РѕРіРёСЂРѕРІР°РЅРёРµ СѓСЃРїРµС€РЅРѕРіРѕ РІС…РѕРґР°
+            await axios.post('/api/history', {
+                description: `РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ ${values.email} РІРѕС€РµР» РІ СЃРёСЃС‚РµРјСѓ`
+            }, { withCredentials: true });
+            window.location.href = '/';
+        } catch (error) {
+            message.error('РћС€РёР±РєР° РІС…РѕРґР°: ' + error.message);
+        }
+    };
+
+    return (
+        <Card title="Р’С…РѕРґ" style={{ maxWidth: 400, margin: '100px auto' }}>
+            <Form onFinish={onFinish}>
+                <Form.Item name="email" rules={[{ required: true, message: 'Р’РІРµРґРёС‚Рµ email!' }]}>
+                    <Input prefix={<MailOutlined />} placeholder="Email" />
+                </Form.Item>
+
+                <Form.Item name="password" rules={[{ required: true, message: 'Р’РІРµРґРёС‚Рµ РїР°СЂРѕР»СЊ!' }]}>
+                    <Input.Password prefix={<LockOutlined />} placeholder="РџР°СЂРѕР»СЊ" />
+                </Form.Item>
+
+                <Form.Item>
+                    <Button type="primary" htmlType="submit" block>
+                        Р’РѕР№С‚Рё
+                    </Button>
+                </Form.Item>
+
+                <Link to="/register">РќРµС‚ Р°РєРєР°СѓРЅС‚Р°? Р—Р°СЂРµРіРёСЃС‚СЂРёСЂСѓР№С‚РµСЃСЊ</Link>
+            </Form>
+        </Card>
+    );
+}
+import { Form, Input, Button, Card, message } from 'antd';
+import { UserOutlined, MailOutlined, LockOutlined } from '@ant-design/icons';
+import { register } from '../api/auth';
+import { Link } from 'react-router-dom';
+import axios from "axios";
+
+export default function RegisterPage() {
+    const onFinish = async (values) => {
+        const formData = new FormData();
+        formData.append('name', values.name);
+        formData.append('email', values.email);
+        formData.append('password', values.password);
+
+        try {
+            await axios.post('/api/users/create', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+                withCredentials: true
+            });
+            message.success('Р РµРіРёСЃС‚СЂР°С†РёСЏ СѓСЃРїРµС€РЅР°!');
+        } catch (error) {
+            message.error('РћС€РёР±РєР°: ' + error.response?.data);
+        }
+    };
+
+    return (
+        <Card title="Р РµРіРёСЃС‚СЂР°С†РёСЏ" style={{ maxWidth: 400, margin: '100px auto' }}>
+            <Form onFinish={onFinish}>
+                <Form.Item name="name" rules={[{ required: true, message: 'Р’РІРµРґРёС‚Рµ РёРјСЏ!' }]}>
+                    <Input prefix={<UserOutlined />} placeholder="РРјСЏ" />
+                </Form.Item>
+
+                <Form.Item name="email" rules={[{ required: true, message: 'Р’РІРµРґРёС‚Рµ email!' }]}>
+                    <Input prefix={<MailOutlined />} placeholder="Email" />
+                </Form.Item>
+
+                <Form.Item name="password" rules={[{ required: true, message: 'Р’РІРµРґРёС‚Рµ РїР°СЂРѕР»СЊ!' }]}>
+                    <Input.Password prefix={<LockOutlined />} placeholder="РџР°СЂРѕР»СЊ" />
+                </Form.Item>
+
+                <Form.Item>
+                    <Button type="primary" htmlType="submit" block>
+                        Р—Р°СЂРµРіРёСЃС‚СЂРёСЂРѕРІР°С‚СЊСЃСЏ
+                    </Button>
+                </Form.Item>
+
+                <Link to="/login">РЈР¶Рµ РµСЃС‚СЊ Р°РєРєР°СѓРЅС‚? Р’РѕР№С‚Рё</Link>
+            </Form>
+        </Card>
+    );
+}
+export const checkAuth = async () => {
+    try {
+        const response = await fetch('/api/users/me', {
+            method: 'GET',
+            credentials: 'include'
+        });
+        return response.ok;
+    } catch (error) {
+        return false;
+    }
+};
+
+export const getAuthToken = () => {
+    return document.cookie
+        .split('; ')
+        .find(row => row.startsWith('JSESSIONID='))
+        ?.split('=')[1];
+};
+.App {
+  text-align: center;
+}
+
+.App-logo {
+  height: 40vmin;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .App-logo {
+    animation: App-logo-spin infinite 20s linear;
+  }
+}
+
+.App-header {
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.App-link {
+  color: #61dafb;
+}
+
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import { Layout } from 'antd';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import DashboardPage from './pages/DashboardPage';
+import AccountPage from './pages/AccountPage';
+import PrivateRoute from './components/PrivateRoute';
+import Header from './components/Header';
+
+const { Content } = Layout;
+
+function App() {
+    return (
+        <Router>
+            <Layout style={{ minHeight: '100vh' }}>
+                <Header />
+                <Content style={{ padding: '0 50px', marginTop: 64 }}>
+                    <Routes>
+                        <Route path="/login" element={<LoginPage />} />
+                        <Route path="/register" element={<RegisterPage />} />
+                        <Route
+                            path="/"
+                            element={
+                                <PrivateRoute>
+                                    <DashboardPage />
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/account"
+                            element={
+                                <PrivateRoute>
+                                    <AccountPage />
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route path="*" element={<Navigate to="/" />} />
+                    </Routes>
+                </Content>
+            </Layout>
+        </Router>
+    );
+}
+
+export default App;
+import { render, screen } from '@testing-library/react';
+import App from './App';
+
+test('renders learn react link', () => {
+  render(<App />);
+  const linkElement = screen.getByText(/learn react/i);
+  expect(linkElement).toBeInTheDocument();
+});
+@import '~antd/dist/reset.css';
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+  sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+}
+
+.site-layout-content {
+  min-height: calc(100vh - 134px);
+  padding: 24px;
+  background: #fff;
+}
+
+.logo {
+  width: 120px;
+  height: 31px;
+  margin: 16px 24px 16px 0;
+  float: left;
+  color: white;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+}
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import './index.css';
+import App from './App';
+import reportWebVitals from './reportWebVitals';
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+
+// If you want to start measuring performance in your app, pass a function
+// to log results (for example: reportWebVitals(console.log))
+// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
+reportWebVitals();
+const reportWebVitals = onPerfEntry => {
+  if (onPerfEntry && onPerfEntry instanceof Function) {
+    import('web-vitals').then(({ getCLS, getFID, getFCP, getLCP, getTTFB }) => {
+      getCLS(onPerfEntry);
+      getFID(onPerfEntry);
+      getFCP(onPerfEntry);
+      getLCP(onPerfEntry);
+      getTTFB(onPerfEntry);
+    });
+  }
+};
+
+export default reportWebVitals;
+// jest-dom adds custom jest matchers for asserting on DOM nodes.
+// allows you to do things like:
+// expect(element).toHaveTextContent(/react/i)
+// learn more: https://github.com/testing-library/jest-dom
+import '@testing-library/jest-dom';

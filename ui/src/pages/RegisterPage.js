@@ -1,10 +1,15 @@
+import { useContext } from 'react';
+import { AuthContext } from '../AuthContext';
 import { Form, Input, Button, Card, message } from 'antd';
 import { UserOutlined, MailOutlined, LockOutlined } from '@ant-design/icons';
-import { register } from '../api/auth';
-import { Link } from 'react-router-dom';
-import axios from "axios";
+import { Link, useNavigate } from 'react-router-dom';
+import { login, getCurrentUser } from '../api/auth';
+import axios from 'axios';
 
 export default function RegisterPage() {
+    const { setUser } = useContext(AuthContext);
+    const navigate = useNavigate();
+
     const onFinish = async (values) => {
         const formData = new FormData();
         formData.append('name', values.name);
@@ -16,9 +21,13 @@ export default function RegisterPage() {
                 headers: { 'Content-Type': 'multipart/form-data' },
                 withCredentials: true
             });
-            message.success('Регистрация успешна!');
+            await login(values.email, values.password);
+            const data = await getCurrentUser();
+            setUser(data);
+            navigate('/');
+            message.success('Регистрация и вход успешны!');
         } catch (error) {
-            message.error('Ошибка: ' + error.response?.data);
+            message.error('Ошибка: ' + (error.response?.data?.message || error.message));
         }
     };
 

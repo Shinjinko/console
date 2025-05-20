@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Table, Spin, Button, Modal, message, Popconfirm, Dropdown, Menu, Form, Input, Card } from 'antd';
+import {Table, Spin, Button, Modal, message, Popconfirm, Dropdown, Menu, Form, Input, Card, Space} from 'antd';
 import axios from 'axios';
 
 export default function ConsolesPage() {
@@ -96,9 +96,22 @@ export default function ConsolesPage() {
         {
             title: 'Действие',
             render: (text, record) => (
-                <Dropdown overlay={() => menu(record)} trigger={['click']}>
-                    <Button>Действия</Button>
-                </Dropdown>
+                <Space>
+                    <Button
+                        type="link"
+                        onClick={() => handleEdit(record)}
+                    >
+                        Редактировать
+                    </Button>
+                    <Popconfirm
+                        title="Удалить консоль?"
+                        onConfirm={() => handleRemove(record.id)}
+                    >
+                        <Button type="link" danger>
+                            Удалить
+                        </Button>
+                    </Popconfirm>
+                </Space>
             ),
         },
     ];
@@ -158,20 +171,25 @@ export default function ConsolesPage() {
                 onCancel={() => setEditVisible(false)}
                 onOk={() => form.submit()}
             >
-                <Form form={form} onFinish={handleEditSubmit}>
+                <Form
+                    form={form}
+                    onFinish={handleEditSubmit}
+                    labelCol={{ span: 6 }}
+                    wrapperCol={{ span: 16 }}
+                >
                     <Form.Item
                         name="name"
                         label="Название"
                         rules={[{ required: true, message: 'Введите название консоли' }]}
                     >
-                        <Input />
+                        <Input style={{ width: '100%' }} />
                     </Form.Item>
                     <Form.Item
                         name="type"
                         label="Тип"
                         rules={[{ required: true, message: 'Введите тип консоли' }]}
                     >
-                        <Input />
+                        <Input style={{ width: '100%' }} />
                     </Form.Item>
                 </Form>
             </Modal>
